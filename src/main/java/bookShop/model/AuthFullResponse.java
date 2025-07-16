@@ -4,9 +4,8 @@ import lombok.*;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
-public class AuthResponse {
+public class AuthFullResponse {
     private String token;
     private Long userId;
-    private String role;
+    private Role role;
 }

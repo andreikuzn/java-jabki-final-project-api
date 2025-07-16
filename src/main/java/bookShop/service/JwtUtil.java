@@ -11,13 +11,24 @@ public class JwtUtil {
     private final String jwtSecret = "your_secret_key"; // можно заменить на более сложный
     private final long jwtExpirationMs = 24 * 60 * 60 * 1000; // сутки
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(bookShop.model.AppUserDetails userDetails) {
+        java.util.Map<String, Object> claims = new java.util.HashMap<>();
+        claims.put("role", userDetails.getRole().name());
         return Jwts.builder()
+                .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(SignatureAlgorithm.HS512, jwtSecret)
                 .compact();
+    }
+
+    public String extractRole(String token) {
+        return (String) Jwts.parser()
+                .setSigningKey(jwtSecret)
+                .parseClaimsJws(token)
+                .getBody()
+                .get("role");
     }
 
     public String extractUsername(String token) {

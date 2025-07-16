@@ -8,5 +8,6 @@ import bookShop.model.Role;
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     boolean existsByRole(Role role);
     Optional<AppUser> findByUsername(String username);
+    boolean existsByUsername(String username);
 }
 

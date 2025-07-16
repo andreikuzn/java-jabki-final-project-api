@@ -2,6 +2,7 @@ package bookShop.model;
 
 import lombok.*;
 import javax.persistence.*;
+import java.io.Serializable;
 
 @Entity
 @Table(name = "app_user")
@@ -9,7 +10,7 @@ import javax.persistence.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AppUser {
+public class AppUser implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

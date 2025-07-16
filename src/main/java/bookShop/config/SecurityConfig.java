@@ -12,38 +12,39 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import bookShop.service.CustomUserDetailsService;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 
 @Configuration
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+    @Autowired
+    private JwtAuthFilter jwtAuthFilter;
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
-
-    @Autowired
-    private JwtAuthFilter jwtAuthFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf().disable()
-                .authorizeHttpRequests()
-                .antMatchers("/auth/login", "/auth/register", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .authorizeRequests()
+                .antMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS); // Без сессий
-
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        return http.getSharedObject(AuthenticationManagerBuilder.class)
-                .userDetailsService(userDetailsService)
-                .passwordEncoder(passwordEncoder())
-                .and()
-                .build();
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
     }
 
     @Bean
