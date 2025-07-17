@@ -2,34 +2,44 @@ package bookShop.service;
 
 import bookShop.model.Book;
 import bookShop.repository.BookRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import bookShop.exception.BookNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class BookService {
-
-    @Autowired
-    private BookRepository bookRepo;
+    private final BookRepository bookRepository;
 
     public List<Book> getAllBooks() {
-        return bookRepo.findAll();
+        return bookRepository.findAll();
+    }
+
+    public Book getBookById(Long id) {
+        return bookRepository.findById(id)
+                .orElseThrow(() -> new BookNotFoundException("Книга не найдена"));
     }
 
     public Book addBook(Book book) {
-        return bookRepo.save(book);
+        return bookRepository.save(book);
     }
 
-    public Book updateBook(Long id, Book bookDetails) {
-        Book book = bookRepo.findById(id).orElseThrow(() -> new RuntimeException("Книга не найдена"));
-        book.setTitle(bookDetails.getTitle());
-        book.setAuthor(bookDetails.getAuthor());
-        book.setCopiesAvailable(bookDetails.getCopiesAvailable());
-        return bookRepo.save(book);
+    public Book updateBook(Long id, Book updatedBook) {
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new BookNotFoundException("Книга не найдена"));
+        book.setTitle(updatedBook.getTitle());
+        book.setAuthor(updatedBook.getAuthor());
+        book.setPrice(updatedBook.getPrice());
+        book.setCopiesAvailable(updatedBook.getCopiesAvailable());
+        return bookRepository.save(book);
     }
 
     public void deleteBook(Long id) {
-        bookRepo.deleteById(id);
+        if (!bookRepository.existsById(id)) {
+            throw new BookNotFoundException("Книга не найдена");
+        }
+        bookRepository.deleteById(id);
     }
 }

@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
-@Tag(name = "Аутентификация", description = "Регистрация и получение JWT-токена")
+@Tag(name = "Аутентификация", description = "Регистрация и получение токена")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -20,7 +20,7 @@ public class AuthController {
 
     @Operation(
             summary = "Регистрация нового пользователя",
-            description = "Создаёт нового пользователя с выбранной ролью (user/admin). Админ может быть только один.",
+            description = "Создаёт нового пользователя с выбранной ролью (user/admin). Пользователей с ролью ADMIN может быть не более 3.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Пользователь успешно зарегистрирован"),
                     @ApiResponse(responseCode = "400", description = "Ошибка регистрации")
@@ -29,19 +29,20 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        if (request.getRole() == bookShop.model.Role.ADMIN && authService.adminExists()) {
-            return ResponseEntity.badRequest().body("Admin already exists");
+        try {
+            authService.register(request);
+            return ResponseEntity.ok("User registered successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-        authService.register(request);
-        return ResponseEntity.ok("User registered successfully");
     }
 
     @Operation(
             summary = "Вход пользователя",
-            description = "Возвращает JWT-токен для доступа к защищённым ресурсам.",
+            description = "Возвращает токен для доступа к защищённым ресурсам.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Успешная аутентификация"),
-                    @ApiResponse(responseCode = "401", description = "Неверные учетные данные")
+                    @ApiResponse(responseCode = "400", description = "Неверный логин или пароль")
             }
     )
 

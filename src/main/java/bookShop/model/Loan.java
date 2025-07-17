@@ -1,16 +1,15 @@
 package bookShop.model;
 
 import lombok.*;
+
 import javax.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
 public class Loan {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,6 +18,9 @@ public class Loan {
     private AppUser appUser;
     @ManyToOne(optional = false)
     private Book book;
+    @Column(nullable = false)
     private LocalDate loanDate;
-    private LocalDate returnDate;
+    @Column(nullable = false)
+    private LocalDate dueDate;
+    private LocalDate returnedDate;
 }

@@ -1,13 +1,18 @@
 package bookShop.service;
 
-import bookShop.model.AppUser;
-import bookShop.model.Book;
-import bookShop.model.Loan;
-import bookShop.repository.AppUserRepository;
-import bookShop.repository.BookRepository;
-import bookShop.repository.LoanRepository;
+import bookShop.model.*;
+import bookShop.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import bookShop.exception.UserNotFoundException;
+import bookShop.exception.BookNotFoundException;
+import bookShop.exception.BookUnavailableException;
+import bookShop.exception.BookLoanLimitExceededException;
+import bookShop.exception.LoanNotFoundException;
+import bookShop.exception.ForbiddenActionException;
+import  bookShop.exception.LoanAlreadyReturnedException;
+import bookShop.exception.BookPriceLimitExceededException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,23 +24,35 @@ public class LoanService {
     private final LoanRepository loanRepository;
     private final BookRepository bookRepository;
     private final AppUserRepository appUserRepository;
+    private final LoyaltyService loyaltyService;
 
-    public List<Loan> getAllLoans() {
-        return loanRepository.findAll();
+    public List<Loan> getActiveLoans(Long userId) {
+        return loanRepository.findByAppUserIdAndReturnedDateIsNull(userId);
     }
 
-    public List<Loan> getLoansByUsername(String username) {
-        return loanRepository.findByAppUserUsername(username);
-    }
-
-    public Loan issueBook(Long bookId, String username) {
-        AppUser user = appUserRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+    @Transactional
+    public Loan issueBook(Long bookId, Long userId) {
+        AppUser user = appUserRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new RuntimeException("Книга не найдена"));
+                .orElseThrow(() -> new BookNotFoundException("Книга не найдена"));
 
+        LoyaltyLevel level = user.getLoyaltyLevel();
+        int currentActiveLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(userId).size();
+
+        // При отрицательных баллах уровень "Новичок"
+        if (user.getLoyaltyPoints() < 0) {
+            level = LoyaltyLevel.NOVICE;
+        }
+
+        if (currentActiveLoans >= level.getMaxBooks()) {
+            throw new BookLoanLimitExceededException("Превышен лимит книг для вашего уровня лояльности (" + level.getTitle() + ")");
+        }
+        if (book.getPrice() > level.getMaxBookPrice()) {
+            throw new BookPriceLimitExceededException("Стоимость книги превышает разрешенную для вашего уровня (" + level.getTitle() + ")");
+        }
         if (book.getCopiesAvailable() <= 0) {
-            throw new RuntimeException("Отсутствуют доступные к выдаче экземпляры");
+            throw new BookUnavailableException("Нет доступных экземпляров книги");
         }
 
         book.setCopiesAvailable(book.getCopiesAvailable() - 1);
@@ -45,29 +62,46 @@ public class LoanService {
                 .appUser(user)
                 .book(book)
                 .loanDate(LocalDate.now())
-                .returnDate(null)
+                .dueDate(LocalDate.now().plusDays(level.getMaxDays()))
                 .build();
 
         return loanRepository.save(loan);
     }
 
-    public Loan returnBook(Long loanId, String username) {
+    @Transactional
+    public Loan returnBook(Long loanId, Long userId) {
         Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new RuntimeException("Не найдена оформленная выдача"));
+                .orElseThrow(() -> new LoanNotFoundException("Выдача книги не найдена"));
 
-        if (!loan.getAppUser().getUsername().equals(username)) {
-            throw new RuntimeException("Пользователь не может вернуть книгу, которую ему не выдавали");
-        }
-        if (loan.getReturnDate() != null) {
-            throw new RuntimeException("Книга уже возвращена");
+        if (!loan.getAppUser().getId().equals(userId)) {
+            throw new ForbiddenActionException("Вы не можете вернуть чужую книгу");
         }
 
-        loan.setReturnDate(LocalDate.now());
+        if (loan.getReturnedDate() != null) {
+            throw new LoanAlreadyReturnedException("Книга уже возвращена");
+        }
+
+        loan.setReturnedDate(LocalDate.now());
+
+        AppUser user = loan.getAppUser();
+        boolean overdue = loan.getReturnedDate().isAfter(loan.getDueDate());
+
+        if (overdue) {
+            user.setLoyaltyPoints(user.getLoyaltyPoints() - 2);
+        } else {
+            user.setLoyaltyPoints(user.getLoyaltyPoints() + 1);
+        }
+
+        LoyaltyLevel newLevel = loyaltyService.calculateLevel(user.getLoyaltyPoints());
+        user.setLoyaltyLevel(newLevel);
+
+        appUserRepository.save(user);
+        loanRepository.save(loan);
 
         Book book = loan.getBook();
         book.setCopiesAvailable(book.getCopiesAvailable() + 1);
         bookRepository.save(book);
 
-        return loanRepository.save(loan);
+        return loan;
     }
 }

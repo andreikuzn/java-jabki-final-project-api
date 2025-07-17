@@ -1,8 +1,9 @@
 package bookShop.model;
 
 import lombok.*;
+
 import javax.persistence.*;
-import java.io.Serializable;
+import java.util.List;
 
 @Entity
 @Table(name = "app_user")
@@ -10,7 +11,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AppUser implements Serializable {
+public class AppUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,4 +22,10 @@ public class AppUser implements Serializable {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+    private int loyaltyPoints = 0;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private LoyaltyLevel loyaltyLevel = LoyaltyLevel.NOVICE;
+    @OneToMany(mappedBy = "appUser")
+    private List<Loan> loans;
 }

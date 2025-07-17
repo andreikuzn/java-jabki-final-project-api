@@ -1,13 +1,14 @@
 package bookShop.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Optional;
 import bookShop.model.AppUser;
 import bookShop.model.Role;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
 
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
-    boolean existsByRole(Role role);
     Optional<AppUser> findByUsername(String username);
+    int countByRole(bookShop.model.Role role);
     boolean existsByUsername(String username);
+    boolean existsByRole(Role role);
 }
-
