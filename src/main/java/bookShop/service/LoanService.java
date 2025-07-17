@@ -30,12 +30,12 @@ public class LoanService {
 
     public Loan issueBook(Long bookId, String username) {
         AppUser user = appUserRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new RuntimeException("Book not found"));
+                .orElseThrow(() -> new RuntimeException("Книга не найдена"));
 
         if (book.getCopiesAvailable() <= 0) {
-            throw new RuntimeException("No copies available");
+            throw new RuntimeException("Отсутствуют доступные к выдаче экземпляры");
         }
 
         book.setCopiesAvailable(book.getCopiesAvailable() - 1);
@@ -45,7 +45,7 @@ public class LoanService {
                 .appUser(user)
                 .book(book)
                 .loanDate(LocalDate.now())
-                .returnDate(null) // ещё не возвращена
+                .returnDate(null)
                 .build();
 
         return loanRepository.save(loan);
@@ -53,13 +53,13 @@ public class LoanService {
 
     public Loan returnBook(Long loanId, String username) {
         Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new RuntimeException("Loan not found"));
+                .orElseThrow(() -> new RuntimeException("Не найдена оформленная выдача"));
 
         if (!loan.getAppUser().getUsername().equals(username)) {
-            throw new RuntimeException("You cannot return a book not issued to you");
+            throw new RuntimeException("Пользователь не может вернуть книгу, которую ему не выдавали");
         }
         if (loan.getReturnDate() != null) {
-            throw new RuntimeException("Book already returned");
+            throw new RuntimeException("Книга уже возвращена");
         }
 
         loan.setReturnDate(LocalDate.now());
