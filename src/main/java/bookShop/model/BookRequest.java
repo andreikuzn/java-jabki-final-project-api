@@ -1,20 +1,27 @@
 package bookShop.model;
 
 import lombok.*;
-import javax.validation.constraints.*;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.PositiveOrZero;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookRequest {
-    @NotBlank(message = "Название книги не должно быть пустым")
-    @Size(max = 128, message = "Название книги не должно превышать 128 символов")
+    @NotBlank(message = "Название не должно быть пустым")
     private String title;
     @NotBlank(message = "Автор не должен быть пустым")
-    @Size(max = 64, message = "Автор не должен превышать 64 символа")
     private String author;
-    @DecimalMin(value = "0.0", inclusive = false, message = "Цена книги должна быть больше 0")
-    private double price;
-    @Min(value = 0, message = "Количество экземпляров не может быть отрицательным")
-    private int copiesAvailable;
+    @NotNull(message = "Цена обязательна")
+    @PositiveOrZero(message = "Цена не может быть отрицательной")
+    private Integer price;
+    @NotNull(message = "Количество экземпляров обязательно")
+    @PositiveOrZero(message = "Количество экземпляров не может быть отрицательным")
+    private Integer copiesAvailable;
+
+    public void trimFields() {
+        if (title != null) title = title.trim();
+        if (author != null) author = author.trim();
+    }
 }

@@ -35,7 +35,7 @@ public class BookController {
         return BookResponse.from(bookService.addBook(request));
     }
 
-    @Operation(summary = "Изменить книгу", description = "Изменить данные книги по ID (только админ)")
+    @Operation(summary = "Изменить книгу", description = "Изменить price и copiesAvailable по ID (только админ)")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public BookResponse updateBook(@PathVariable Long id, @Valid @RequestBody BookRequest request) {
@@ -47,5 +47,30 @@ public class BookController {
     @DeleteMapping("/{id}")
     public void deleteBook(@PathVariable Long id) {
         bookService.deleteBook(id);
+    }
+
+    @Operation(summary = "Получить книгу по id", description = "Только для администратора")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}")
+    public BookResponse getBookById(@PathVariable Long id) {
+        return BookResponse.from(bookService.getBookById(id));
+    }
+
+    @Operation(summary = "Получить книги по названию", description = "Только для администратора")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/by-title/{title}")
+    public List<BookResponse> getBooksByTitle(@PathVariable String title) {
+        return bookService.getBooksByTitle(title).stream()
+                .map(BookResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Operation(summary = "Получить книги по автору", description = "Только для администратора")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/by-author/{author}")
+    public List<BookResponse> getBooksByAuthor(@PathVariable String author) {
+        return bookService.getBooksByAuthor(author).stream()
+                .map(BookResponse::from)
+                .collect(Collectors.toList());
     }
 }

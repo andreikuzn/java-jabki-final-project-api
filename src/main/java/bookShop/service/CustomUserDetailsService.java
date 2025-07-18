@@ -8,8 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import bookShop.repository.AppUserRepository;
 import bookShop.model.AppUserDetails;
 import bookShop.model.AppUser;
+import lombok.extern.slf4j.Slf4j;
 
-
+@Slf4j
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
     private final AppUserRepository userRepository;
@@ -22,7 +23,11 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         AppUser user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> {
+                    log.warn("Попытка входа с несуществующим пользователем: [{}]", username);
+                    return new UsernameNotFoundException("Пользователь не найден");
+                });
+        log.info("Пользователь [{}] успешно найден для авторизации", username);
         return new AppUserDetails(user);
     }
 }

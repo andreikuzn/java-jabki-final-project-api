@@ -6,6 +6,7 @@ import bookShop.service.LoanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,6 +51,26 @@ public class LoanController {
     public List<LoanResponse> myLoans(Authentication authentication) {
         AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
         Long userId = userDetails.getId();
+        return loanService.getActiveLoans(userId)
+                .stream()
+                .map(LoanResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Operation(summary = "Получить активные выдачи по id книги", description = "Только для админа")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/active/book/{bookId}")
+    public List<LoanResponse> getActiveLoansByBook(@PathVariable Long bookId) {
+        return loanService.getActiveLoansByBook(bookId)
+                .stream()
+                .map(LoanResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Operation(summary = "Получить активные выдачи по id пользователя", description = "Только для админа")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/active/user/{userId}")
+    public List<LoanResponse> getActiveLoansByUser(@PathVariable Long userId) {
         return loanService.getActiveLoans(userId)
                 .stream()
                 .map(LoanResponse::from)

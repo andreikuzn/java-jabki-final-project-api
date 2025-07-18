@@ -13,7 +13,7 @@ public class SwaggerConfig {
     public OpenAPI api() {
         return new OpenAPI()
                 .info(new Info().title("BookShop API")
-                        .description("API для управления библиотекой")
+                        .description("API для управления автоматической библиотекой")
                         .version("1.0"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new io.swagger.v3.oas.models.Components()

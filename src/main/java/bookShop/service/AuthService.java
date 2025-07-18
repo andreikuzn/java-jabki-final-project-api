@@ -15,7 +15,12 @@ import org.springframework.stereotype.Service;
 import bookShop.model.AuthResponse;
 import bookShop.model.AuthRequest;
 import bookShop.exception.InvalidCredentialsException;
+import bookShop.exception.*;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -23,25 +28,37 @@ public class AuthService {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     public void register(RegisterRequest request) {
-        if (request.getRole() == Role.ADMIN && userRepository.countByRole(Role.ADMIN) >= 3) {
-            throw new AdminLimitExceededException("Нельзя регистрировать больше 3-х администраторов");
-        }
+        log.info("Регистрация пользователя: {}", request.getUsername());
+        request.trimFields();
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
+        }
+        if (request.getRole() == Role.ADMIN) {
+            int adminCount = userRepository.countByRole(Role.ADMIN);
+            if (adminCount >= 3) {
+                throw new AdminLimitExceededException("В системе не может быть более 3-х админов");
+            }
+        }
+        var violations = validator.validateProperty(request, "password");
+        if (!violations.isEmpty()) {
+            throw new ValidationException(violations.iterator().next().getMessage());
         }
         AppUser user = AppUser.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole() != null ? request.getRole() : Role.USER)
+                .role(request.getRole())
                 .loyaltyPoints(0)
                 .loyaltyLevel(LoyaltyLevel.NOVICE)
                 .build();
         userRepository.save(user);
+        log.info("Пользователь [{}] успешно зарегистрирован", request.getUsername());
     }
 
     public AuthResponse login(AuthRequest request) {
+        log.info("Попытка входа пользователя: {}", request.getUsername());
         AppUser user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
 
@@ -50,6 +67,7 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(new AppUserDetails(user));
+        log.info("Пользователь [{}] успешно вошёл в систему", request.getUsername());
         return new AuthResponse(token, user.getId(), user.getRole().name());
     }
 

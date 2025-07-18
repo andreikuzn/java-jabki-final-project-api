@@ -35,7 +35,7 @@ public class UserController {
         return userService.getUserResponseById(userDetails.getId());
     }
 
-    @Operation(summary = "Обновить пользователя", description = "Обновить данные пользователя (имя, пароль). Роль может менять только админ")
+    @Operation(summary = "Обновить пользователя", description = "Обновить данные пользователя (только password для всех, только role для админа, username нельзя)")
     @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
     @PutMapping("/{id}")
     public UserResponse updateUser(@PathVariable Long id,
@@ -50,5 +50,26 @@ public class UserController {
     @PostMapping
     public UserResponse createUser(@Valid @RequestBody RegisterRequest request) {
         return userService.createUser(request);
+    }
+
+    @Operation(summary = "Удалить пользователя по id", description = "Только для администратора")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public void deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+    }
+
+    @Operation(summary = "Получить пользователя по id", description = "Только для администратора")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}")
+    public UserResponse getUserById(@PathVariable Long id) {
+        return userService.getUserResponseById(id);
+    }
+
+    @Operation(summary = "Получить пользователя по username", description = "Только для администратора")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/by-username/{username}")
+    public UserResponse getUserByUsername(@PathVariable String username) {
+        return userService.getUserResponseByUsername(username);
     }
 }
