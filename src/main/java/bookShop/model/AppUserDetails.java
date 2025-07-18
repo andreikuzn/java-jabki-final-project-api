@@ -3,7 +3,7 @@ package bookShop.model;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import lombok.*;
+import lombok.Getter;
 import java.util.Collection;
 import java.util.List;
 
@@ -58,8 +58,4 @@ public class AppUserDetails implements UserDetails {
         return user.getId();
     }
 
-    public AppUser getUser() {
-        return user;
-    }
 }
-

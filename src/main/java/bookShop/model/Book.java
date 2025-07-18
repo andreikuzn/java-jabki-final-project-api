@@ -18,7 +18,6 @@ public class Book {
     @Column(nullable = false)
     private String author;
     @Column(nullable = false)
-    private int copiesAvailable;
-    @Column(nullable = false)
     private double price;
+    private int copiesAvailable;
 }

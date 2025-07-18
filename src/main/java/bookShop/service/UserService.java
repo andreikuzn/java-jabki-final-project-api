@@ -1,102 +1,90 @@
 package bookShop.service;
 
-import bookShop.model.RegisterRequest;
-import bookShop.model.AppUserDetails;
-import bookShop.model.UserResponse;
-import bookShop.model.AppUser;
-import bookShop.model.Role;
-import bookShop.model.LoyaltyLevel;
+import bookShop.model.*;
 import bookShop.repository.AppUserRepository;
+import bookShop.repository.LoanRepository;
+import bookShop.exception.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import bookShop.repository.LoanRepository;
-import bookShop.exception.UserNotFoundException;
-import bookShop.exception.UserAlreadyExistsException;
-import bookShop.exception.AdminLimitExceededException;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
-    private final AppUserRepository appUserRepository;
+    private final AppUserRepository userRepository;
     private final LoanRepository loanRepository;
     private final PasswordEncoder passwordEncoder;
-    private final LoyaltyService loyaltyService;
 
     public List<UserResponse> getAllUsers() {
-        return appUserRepository.findAll().stream()
-                .map(UserResponse::from)
+        return userRepository.findAll().stream()
+                .map(user -> {
+                    UserResponse response = UserResponse.from(user);
+                    List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
+                    response.setActiveLoans(activeLoans.stream()
+                            .map(LoanResponse::from)
+                            .collect(Collectors.toList()));
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
-    public UserResponse getMe(Authentication authentication) {
-        AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
-        AppUser user = userDetails.getUser();
-        return UserResponse.from(user);
+    public UserResponse getUserResponseById(Long id) {
+        AppUser user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+        UserResponse response = UserResponse.from(user);
+        List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
+        response.setActiveLoans(activeLoans.stream()
+                .map(LoanResponse::from)
+                .collect(Collectors.toList()));
+        return response;
     }
 
-    public UserResponse updateUser(Long id, RegisterRequest request, Authentication auth) {
-        AppUser current = (AppUser) auth.getPrincipal();
-        AppUser user = appUserRepository.findById(id)
+    public UserResponse updateUser(Long id, RegisterRequest request, AppUserDetails userDetails) {
+        AppUser user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-        if (appUserRepository.existsByUsername(request.getUsername())) {
-            throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
+        // Проверка прав: админ или владелец (по id)
+        boolean isAdmin = userDetails.getRole() == Role.ADMIN;
+        boolean isOwner = user.getId().equals(userDetails.getId());
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenActionException("Недостаточно прав для изменения пользователя");
         }
-        if (current.getRole() == Role.ADMIN && request.getRole() != null) {
-            if (request.getRole() == Role.ADMIN && appUserRepository.countByRole(Role.ADMIN) >= 3) {
-                throw new AdminLimitExceededException("Нельзя иметь больше 3-х администраторов");
+        // Username: если изменяется, то проверяем уникальность
+        if (!user.getUsername().equals(request.getUsername())) {
+            if (userRepository.existsByUsername(request.getUsername())) {
+                throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
             }
-            user.setRole(request.getRole());
-        }
-        if (request.getUsername() != null) {
             user.setUsername(request.getUsername());
         }
-        if (request.getPassword() != null) {
+        // Пароль: всегда обновлять, если передан новый
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
-
-        user.setLoyaltyLevel(loyaltyService.calculateLevel(user.getLoyaltyPoints()));
-
-        return UserResponse.from(appUserRepository.save(user));
+        // Роль: менять может только админ
+        if (isAdmin && request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+        AppUser saved = userRepository.save(user);
+        return getUserResponseById(saved.getId());
     }
 
     public UserResponse createUser(RegisterRequest request) {
-        if (appUserRepository.existsByUsername(request.getUsername())) {
+        if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
-        }
-        if (request.getRole() == Role.ADMIN && appUserRepository.countByRole(Role.ADMIN) >= 3) {
-            throw new AdminLimitExceededException("Нельзя регистрировать больше 3-х администраторов");
         }
         AppUser user = AppUser.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole() != null ? request.getRole() : Role.USER)
+                .role(request.getRole())
                 .loyaltyPoints(0)
                 .loyaltyLevel(LoyaltyLevel.NOVICE)
                 .build();
-        return UserResponse.from(appUserRepository.save(user));
-    }
-
-    public UserResponse getUserResponseById(Long userId) {
-        AppUser user = appUserRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-
-        // Подгрузим все активные выдачи пользователя
-        List<bookShop.model.Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(userId);
-
-        // Соберём DTO
-        UserResponse response = new UserResponse();
-        response.setId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setRole(user.getRole().name());
-        response.setLoyaltyPoints(user.getLoyaltyPoints());
-        response.setLoyaltyLevel(user.getLoyaltyLevel().getTitle());
-        response.setActiveLoans(activeLoans.stream().map(bookShop.model.LoanResponse::from).collect(Collectors.toList()));
-        return response;
+        AppUser saved = userRepository.save(user);
+        return getUserResponseById(saved.getId());
     }
 }

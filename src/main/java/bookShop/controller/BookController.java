@@ -1,18 +1,18 @@
 package bookShop.controller;
 
 import bookShop.model.BookResponse;
-import bookShop.model.Book;
+import bookShop.model.BookRequest;
 import bookShop.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Tag(name = "Книги", description = "CRUD для книг")
+@Tag(name = "Книги", description = "Управление книгами")
 @RestController
 @RequestMapping("/books")
 @RequiredArgsConstructor
@@ -31,15 +31,15 @@ public class BookController {
     @Operation(summary = "Добавить книгу", description = "Добавить новую книгу (только админ)")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public BookResponse addBook(@RequestBody Book book) {
-        return BookResponse.from(bookService.addBook(book));
+    public BookResponse addBook(@Valid @RequestBody BookRequest request) {
+        return BookResponse.from(bookService.addBook(request));
     }
 
     @Operation(summary = "Изменить книгу", description = "Изменить данные книги по ID (только админ)")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public BookResponse updateBook(@PathVariable Long id, @RequestBody Book book) {
-        return BookResponse.from(bookService.updateBook(id, book));
+    public BookResponse updateBook(@PathVariable Long id, @Valid @RequestBody BookRequest request) {
+        return BookResponse.from(bookService.updateBook(id, request));
     }
 
     @Operation(summary = "Удалить книгу", description = "Удалить книгу по ID (только админ)")

@@ -1,6 +1,7 @@
 package bookShop.service;
 
 import bookShop.model.Book;
+import bookShop.model.BookRequest;
 import bookShop.repository.BookRepository;
 import bookShop.exception.BookNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,17 +23,23 @@ public class BookService {
                 .orElseThrow(() -> new BookNotFoundException("Книга не найдена"));
     }
 
-    public Book addBook(Book book) {
+    public Book addBook(BookRequest request) {
+        Book book = Book.builder()
+                .title(request.getTitle())
+                .author(request.getAuthor())
+                .price(request.getPrice())
+                .copiesAvailable(request.getCopiesAvailable())
+                .build();
         return bookRepository.save(book);
     }
 
-    public Book updateBook(Long id, Book updatedBook) {
+    public Book updateBook(Long id, BookRequest request) {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new BookNotFoundException("Книга не найдена"));
-        book.setTitle(updatedBook.getTitle());
-        book.setAuthor(updatedBook.getAuthor());
-        book.setPrice(updatedBook.getPrice());
-        book.setCopiesAvailable(updatedBook.getCopiesAvailable());
+        book.setTitle(request.getTitle());
+        book.setAuthor(request.getAuthor());
+        book.setPrice(request.getPrice());
+        book.setCopiesAvailable(request.getCopiesAvailable());
         return bookRepository.save(book);
     }
 

@@ -26,6 +26,6 @@ public class AppUser {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private LoyaltyLevel loyaltyLevel = LoyaltyLevel.NOVICE;
-    @OneToMany(mappedBy = "appUser")
+    @OneToMany(mappedBy = "appUser", fetch = FetchType.EAGER)
     private List<Loan> loans;
 }
