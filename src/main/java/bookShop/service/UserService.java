@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import bookShop.model.response.UserResponse;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.List;
@@ -26,7 +26,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
-    public List<bookShop.model.response.UserResponse> getAllUsers() {
+    public List<UserResponse> getAllUsers() {
         List<AppUser> users = userRepository.findAll();
         if (users.isEmpty()) {
             throw new UserNotFoundException("Пользователи не найдены");
@@ -36,13 +36,21 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public bookShop.model.response.UserResponse getUserResponseById(Long id) {
+    public UserResponse getUserById(Long id) {
         AppUser user = findUserByIdOrThrow(id);
         return toUserResponseWithActiveLoans(user);
     }
 
-    public bookShop.model.response.UserResponse getUserResponseByUsername(String username) {
-        AppUser user = userRepository.findByUsername(username)
+    public List<UserResponse> getUsersByUsername(String username) {
+        List<AppUser> users = userRepository.findByUsernameIgnoreCaseLike(username);
+        if (users.isEmpty()) {
+            throw new UserNotFoundException("Пользователи с таким username не найдены");
+        }
+        return users.stream().map(this::toUserResponseWithActiveLoans).collect(Collectors.toList());
+    }
+
+    public UserResponse getUserByUsername(String username) {
+        AppUser user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь с таким username не найден"));
         return toUserResponseWithActiveLoans(user);
     }
@@ -56,7 +64,7 @@ public class UserService {
         log.info("Пользователь [{}] удалён админом", id);
     }
 
-    public bookShop.model.response.UserResponse updateUser(Long id, RegisterRequest request, AppUserDetails userDetails) {
+    public UserResponse updateUser(Long id, RegisterRequest request, AppUserDetails userDetails) {
         log.info("Пользователь [{}] инициировал обновление пользователя [{}]", userDetails.getUsername(), id);
         trimRequestFields(request);
         AppUser user = findUserByIdOrThrow(id);
@@ -67,10 +75,10 @@ public class UserService {
         return toUserResponseWithActiveLoans(saved);
     }
 
-    public bookShop.model.response.UserResponse createUser(RegisterRequest request) {
+    public UserResponse createUser(RegisterRequest request) {
         log.info("Попытка создать пользователя: username={}", request.getUsername());
         trimRequestFields(request);
-        if (userRepository.existsByUsername(request.getUsername())) {
+        if (userRepository.existsByUsernameIgnoreCase(request.getUsername())) {
             throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
         }
         if (request.getRole() == Role.ADMIN) {
@@ -95,7 +103,7 @@ public class UserService {
                 .orElseThrow(UserNotFoundException::new);
     }
 
-    private bookShop.model.response.UserResponse toUserResponseWithActiveLoans(AppUser user) {
+    private UserResponse toUserResponseWithActiveLoans(AppUser user) {
         bookShop.model.response.UserResponse response = bookShop.model.response.UserResponse.from(user);
         List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
         response.setActiveLoans(
@@ -127,7 +135,6 @@ public class UserService {
     }
 
     private void updateUserFields(AppUser user, RegisterRequest request, AppUserDetails userDetails) {
-        // password
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             var violations = validator.validateProperty(request, "password");
             if (!violations.isEmpty()) {

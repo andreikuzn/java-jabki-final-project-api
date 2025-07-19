@@ -29,13 +29,13 @@ public class BookService {
     }
 
     public List<Book> getBooksByTitle(String title) {
-        List<Book> books = bookRepository.findByTitle(title);
+        List<Book> books = bookRepository.findByTitleIgnoreCaseLike(title);
         if (books.isEmpty()) throw new BookNotFoundException("Книги с указанным названием не найдены");
         return books;
     }
 
     public List<Book> getBooksByAuthor(String author) {
-        List<Book> books = bookRepository.findByAuthor(author);
+        List<Book> books = bookRepository.findByAuthorIgnoreCaseLike(author);
         if (books.isEmpty()) throw new BookNotFoundException("Книги с указанным автором не найдены");
         return books;
     }
@@ -76,7 +76,7 @@ public class BookService {
     }
 
     private void validateBookUnique(String title, String author) {
-        if (bookRepository.existsByTitleAndAuthor(title, author)) {
+        if (bookRepository.existsByTitleAndAuthorIgnoreCase(title, author)) {
             throw new BookAlreadyExistsException("Книга с таким названием и автором уже существует");
         }
     }

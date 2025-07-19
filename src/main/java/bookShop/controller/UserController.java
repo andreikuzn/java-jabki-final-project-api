@@ -129,7 +129,7 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse> getMe(Authentication authentication) {
         AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
-        return success(userService.getUserResponseById(userDetails.getId()));
+        return success(userService.getUserById(userDetails.getId()));
     }
 
     @Operation(
@@ -199,7 +199,7 @@ public class UserController {
             }
     )
     @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
-    @PutMapping("/{id}")
+    @PutMapping("/Id/{id}")
     public ResponseEntity<ApiResponse> updateUser(@PathVariable Long id,
                                                   @Valid @RequestBody RegisterRequest request,
                                                   Authentication authentication) {
@@ -326,7 +326,7 @@ public class UserController {
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/Id/{id}")
     public ResponseEntity<ApiResponse> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return successMsg("Пользователь удалён");
@@ -389,9 +389,9 @@ public class UserController {
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{id}")
+    @GetMapping("/Id/{id}")
     public ResponseEntity<ApiResponse> getUserById(@PathVariable Long id) {
-        return success(userService.getUserResponseById(id));
+        return success(userService.getUserById(id));
     }
 
     @Operation(
@@ -451,8 +451,8 @@ public class UserController {
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{username}")
+    @GetMapping("/username/{username}")
     public ResponseEntity<ApiResponse> getUserByUsername(@PathVariable String username) {
-        return success(userService.getUserResponseByUsername(username));
+        return success(userService.getUsersByUsername(username));
     }
 }
