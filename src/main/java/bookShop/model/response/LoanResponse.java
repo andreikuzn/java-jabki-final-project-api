@@ -1,4 +1,4 @@
-package bookShop.model;
+package bookShop.model.response;
 
 import lombok.Data;
 
@@ -13,7 +13,7 @@ public class LoanResponse {
     private LocalDate dueDate;
     private LocalDate returnedDate;
 
-    public static LoanResponse from(Loan loan) {
+    public static LoanResponse from(bookShop.model.Loan loan) {
         LoanResponse dto = new LoanResponse();
         dto.setId(loan.getId());
         dto.setBookId(loan.getBook().getId());

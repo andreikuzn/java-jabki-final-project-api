@@ -26,7 +26,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
-    public List<UserResponse> getAllUsers() {
+    public List<bookShop.model.response.UserResponse> getAllUsers() {
         List<AppUser> users = userRepository.findAll();
         if (users.isEmpty()) {
             throw new UserNotFoundException("Пользователи не найдены");
@@ -36,12 +36,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public UserResponse getUserResponseById(Long id) {
+    public bookShop.model.response.UserResponse getUserResponseById(Long id) {
         AppUser user = findUserByIdOrThrow(id);
         return toUserResponseWithActiveLoans(user);
     }
 
-    public UserResponse getUserResponseByUsername(String username) {
+    public bookShop.model.response.UserResponse getUserResponseByUsername(String username) {
         AppUser user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь с таким username не найден"));
         return toUserResponseWithActiveLoans(user);
@@ -56,7 +56,7 @@ public class UserService {
         log.info("Пользователь [{}] удалён админом", id);
     }
 
-    public UserResponse updateUser(Long id, RegisterRequest request, AppUserDetails userDetails) {
+    public bookShop.model.response.UserResponse updateUser(Long id, RegisterRequest request, AppUserDetails userDetails) {
         log.info("Пользователь [{}] инициировал обновление пользователя [{}]", userDetails.getUsername(), id);
         trimRequestFields(request);
         AppUser user = findUserByIdOrThrow(id);
@@ -67,7 +67,7 @@ public class UserService {
         return toUserResponseWithActiveLoans(saved);
     }
 
-    public UserResponse createUser(RegisterRequest request) {
+    public bookShop.model.response.UserResponse createUser(RegisterRequest request) {
         log.info("Попытка создать пользователя: username={}", request.getUsername());
         trimRequestFields(request);
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -95,12 +95,12 @@ public class UserService {
                 .orElseThrow(UserNotFoundException::new);
     }
 
-    private UserResponse toUserResponseWithActiveLoans(AppUser user) {
-        UserResponse response = UserResponse.from(user);
+    private bookShop.model.response.UserResponse toUserResponseWithActiveLoans(AppUser user) {
+        bookShop.model.response.UserResponse response = bookShop.model.response.UserResponse.from(user);
         List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
         response.setActiveLoans(
                 activeLoans.stream()
-                        .map(LoanResponse::from)
+                        .map(bookShop.model.response.LoanResponse::from)
                         .collect(Collectors.toList())
         );
         return response;

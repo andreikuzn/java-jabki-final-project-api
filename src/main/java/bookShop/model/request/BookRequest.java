@@ -1,4 +1,4 @@
-package bookShop.model;
+package bookShop.model.request;
 
 import lombok.*;
 import javax.validation.constraints.NotBlank;

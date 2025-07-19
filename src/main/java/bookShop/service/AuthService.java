@@ -12,9 +12,9 @@ import bookShop.exception.UserAlreadyExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import bookShop.model.AuthResponse;
-import bookShop.model.AuthRequest;
-import bookShop.model.UserResponse;
+import bookShop.model.response.AuthResponse;
+import bookShop.model.request.AuthRequest;
+import bookShop.model.response.UserResponse;
 import bookShop.exception.InvalidCredentialsException;
 import bookShop.exception.*;
 import javax.validation.Validation;
@@ -28,7 +28,7 @@ public class AuthService {
 
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+    private final bookShop.security.JwtUtil jwtUtil;
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     public UserResponse register(RegisterRequest request) {

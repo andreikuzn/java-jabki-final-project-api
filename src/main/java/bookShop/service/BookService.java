@@ -1,7 +1,7 @@
 package bookShop.service;
 
 import bookShop.model.Book;
-import bookShop.model.BookRequest;
+import bookShop.model.request.BookRequest;
 import bookShop.repository.BookRepository;
 import bookShop.exception.BookNotFoundException;
 import bookShop.exception.ForbiddenActionException;
@@ -43,9 +43,7 @@ public class BookService {
     public Book addBook(BookRequest request) {
         log.info("Добавление книги: [{}] [{}]", request.getTitle(), request.getAuthor());
         request.trimFields();
-        if (bookRepository.existsByTitleAndAuthor(request.getTitle(), request.getAuthor())) {
-            throw new BookAlreadyExistsException("Книга с таким названием и автором уже существует");
-        }
+        validateBookUnique(request.getTitle(), request.getAuthor());
         Book book = Book.builder()
                 .title(request.getTitle())
                 .author(request.getAuthor())
@@ -56,18 +54,12 @@ public class BookService {
         return bookRepository.save(book);
     }
 
-
     public Book updateBook(Long id, BookRequest request) {
         log.info("Обновление книги [{}]", id);
         request.trimFields();
         Book book = bookRepository.findById(id)
                 .orElseThrow(BookNotFoundException::new);
-        if (!book.getTitle().equals(request.getTitle())) {
-            throw new ForbiddenActionException("Изменение названия книги запрещено");
-        }
-        if (!book.getAuthor().equals(request.getAuthor())) {
-            throw new ForbiddenActionException("Изменение автора книги запрещено");
-        }
+        validateUpdateNotChangeMainFields(book, request);
         book.setPrice(request.getPrice());
         book.setCopiesAvailable(request.getCopiesAvailable());
         log.info("Книга [{}] успешно обновлена", id);
@@ -81,5 +73,20 @@ public class BookService {
         }
         bookRepository.deleteById(id);
         log.info("Книга [{}] удалена админом", id);
+    }
+
+    private void validateBookUnique(String title, String author) {
+        if (bookRepository.existsByTitleAndAuthor(title, author)) {
+            throw new BookAlreadyExistsException("Книга с таким названием и автором уже существует");
+        }
+    }
+
+    private void validateUpdateNotChangeMainFields(Book book, BookRequest request) {
+        if (!book.getTitle().equals(request.getTitle())) {
+            throw new ForbiddenActionException("Изменение названия книги запрещено");
+        }
+        if (!book.getAuthor().equals(request.getAuthor())) {
+            throw new ForbiddenActionException("Изменение автора книги запрещено");
+        }
     }
 }

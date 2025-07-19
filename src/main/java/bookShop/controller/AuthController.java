@@ -1,10 +1,10 @@
 package bookShop.controller;
 
 import bookShop.model.RegisterRequest;
-import bookShop.model.ApiResponse;
-import bookShop.model.AuthRequest;
-import bookShop.model.AuthResponse;
-import bookShop.model.UserResponse;
+import bookShop.util.ApiResponse;
+import bookShop.model.request.AuthRequest;
+import bookShop.model.response.AuthResponse;
+import bookShop.model.response.UserResponse;
 import bookShop.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

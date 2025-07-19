@@ -1,4 +1,4 @@
-package bookShop.service;
+package bookShop.security;
 
 import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;

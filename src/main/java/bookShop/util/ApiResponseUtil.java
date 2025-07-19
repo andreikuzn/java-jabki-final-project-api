@@ -1,7 +1,7 @@
 package bookShop.util;
 
-import bookShop.model.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import bookShop.model.request.AuthRequest;
 
 public class ApiResponseUtil {
 

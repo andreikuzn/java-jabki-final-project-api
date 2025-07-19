@@ -1,4 +1,4 @@
-package bookShop.model;
+package bookShop.model.request;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;

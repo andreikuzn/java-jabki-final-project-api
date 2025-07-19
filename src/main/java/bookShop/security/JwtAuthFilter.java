@@ -1,4 +1,4 @@
-package bookShop.config;
+package bookShop.security;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +12,6 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.*;
 import java.io.IOException;
-import bookShop.service.JwtUtil;
-import bookShop.service.CustomUserDetailsService;
 
 @Slf4j
 @Component

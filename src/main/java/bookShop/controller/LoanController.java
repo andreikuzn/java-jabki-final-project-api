@@ -1,7 +1,7 @@
 package bookShop.controller;
 
-import bookShop.model.LoanResponse;
-import bookShop.model.ApiResponse;
+import bookShop.model.response.LoanResponse;
+import bookShop.util.ApiResponse;
 import bookShop.model.AppUserDetails;
 import bookShop.service.LoanService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static bookShop.util.ApiResponseUtil.success;
-import static bookShop.util.SwaggerResponses.*;
+import static bookShop.controller.swagger.SwaggerResponses.*;
 
 @Tag(name = "Выдача книг", description = "Выдача и возврат книг")
 @RestController
@@ -324,7 +324,7 @@ public class LoanController {
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{bookId}")
+    @GetMapping("/by-bookId/{bookId}")
     public ResponseEntity<ApiResponse> getActiveLoansByBook(@PathVariable Long bookId) {
         List<LoanResponse> data = loanService.getActiveLoansByBook(bookId)
                 .stream()
@@ -397,7 +397,7 @@ public class LoanController {
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{userId}")
+    @GetMapping("/by-userId/{userId}")
     public ResponseEntity<ApiResponse> getActiveLoansByUser(@PathVariable Long userId) {
         List<LoanResponse> data = loanService.getActiveLoans(userId)
                 .stream()

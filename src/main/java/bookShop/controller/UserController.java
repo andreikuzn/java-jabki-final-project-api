@@ -2,7 +2,7 @@ package bookShop.controller;
 
 import bookShop.model.RegisterRequest;
 import bookShop.model.AppUserDetails;
-import bookShop.model.ApiResponse;
+import bookShop.util.ApiResponse;
 import bookShop.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 
 import static bookShop.util.ApiResponseUtil.*;
-import static bookShop.util.SwaggerResponses.*;
+import static bookShop.controller.swagger.SwaggerResponses.*;
 
 
 @Tag(name = "Пользователи", description = "Управление пользователями")

@@ -1,4 +1,4 @@
-package bookShop.model;
+package bookShop.model.response;
 
 import lombok.*;
 

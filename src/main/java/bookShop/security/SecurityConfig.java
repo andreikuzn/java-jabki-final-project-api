@@ -1,6 +1,5 @@
-package bookShop.config;
+package bookShop.security;
 
-import bookShop.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,16 +17,16 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 public class SecurityConfig {
 
     @Autowired
-    private JwtAuthFilter jwtAuthFilter;
+    private bookShop.security.JwtAuthFilter jwtAuthFilter;
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
     @Autowired
-    private CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private bookShop.security.CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     @Autowired
-    private CustomAccessDeniedHandler accessDeniedHandler;
+    private bookShop.security.CustomAccessDeniedHandler accessDeniedHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {

@@ -1,4 +1,4 @@
-package bookShop.service;
+package bookShop.security;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

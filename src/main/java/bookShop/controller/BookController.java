@@ -1,8 +1,8 @@
 package bookShop.controller;
 
-import bookShop.model.BookResponse;
-import bookShop.model.BookRequest;
-import bookShop.model.ApiResponse;
+import bookShop.model.response.BookResponse;
+import bookShop.model.request.BookRequest;
+import bookShop.util.ApiResponse;
 import bookShop.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +16,10 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static bookShop.util.ApiResponseUtil.success;
+import static bookShop.util.ApiResponseUtil.successMsg;
+import static bookShop.controller.swagger.SwaggerResponses.*;
 
 @Tag(name = "Книги", description = "Управление книгами")
 @RestController
@@ -35,17 +39,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -55,7 +49,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книги не найдены\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_404_BOOK
                                     )
                             )
                     ),
@@ -65,7 +59,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -75,7 +69,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -86,7 +80,7 @@ public class BookController {
         List<BookResponse> data = bookService.getAllBooks().stream()
                 .map(BookResponse::from)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(data);
     }
 
     @Operation(
@@ -99,17 +93,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": "Книга успешно добавлена",
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_MSG_BOOK_ADD
                                     )
                             )
                     ),
@@ -121,11 +105,11 @@ public class BookController {
                                     examples = {
                                             @ExampleObject(
                                                     name = "Ошибка валидации",
-                                                    value = "{ \"error\": \"VALIDATION_ERROR\", \"message\": \"Название книги должно быть от 2 до 32 символов\", \"status\": 400, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                                    value = STATUS_400_VALIDATION
                                             ),
                                             @ExampleObject(
                                                     name = "Книга уже существует",
-                                                    value = "{ \"error\": \"BOOK_ALREADY_EXISTS\", \"message\": \"Книга с таким названием и автором уже существует\", \"status\": 400, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                                    value = STATUS_400_ALREADY_EXISTS
                                             )
                                     }
                             )
@@ -136,7 +120,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -146,7 +130,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -156,7 +140,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -166,7 +150,7 @@ public class BookController {
     @PostMapping
     public ResponseEntity<ApiResponse> addBook(@Valid @RequestBody BookRequest request) {
         BookResponse data = BookResponse.from(bookService.addBook(request));
-        return ResponseEntity.ok(ApiResponse.successWithData(data, "Книга успешно добавлена"));
+        return success(data, "Книга успешно добавлена");
     }
 
     @Operation(
@@ -179,17 +163,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": "Книга успешно обновлена",
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_MSG_BOOK_UPDATED
                                     )
                             )
                     ),
@@ -199,7 +173,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книга не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_404_BOOK
                                     )
                             )
                     ),
@@ -209,7 +183,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"VALIDATION_ERROR\", \"message\": \"Некорректные данные\", \"status\": 400, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_400_VALIDATION
                                     )
                             )
                     ),
@@ -219,7 +193,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -229,7 +203,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -239,17 +213,17 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
+    @PutMapping("/id/{id}")
     public ResponseEntity<ApiResponse> updateBook(@PathVariable Long id, @Valid @RequestBody BookRequest request) {
         BookResponse data = BookResponse.from(bookService.updateBook(id, request));
-        return ResponseEntity.ok(ApiResponse.successWithData(data, "Книга успешно обновлена"));
+        return success(data, "Книга успешно обновлена");
     }
 
     @Operation(
@@ -262,7 +236,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": null, \"message\": \"Книга удалена\", \"status\": 200, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_200_MSG_BOOK_DELETED
                                     )
                             )
                     ),
@@ -272,7 +246,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книга не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_404_BOOK
                                     )
                             )
                     ),
@@ -282,7 +256,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -292,7 +266,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -302,17 +276,17 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/id/{id}")
     public ResponseEntity<ApiResponse> deleteBook(@PathVariable Long id) {
         bookService.deleteBook(id);
-        return ResponseEntity.ok(ApiResponse.successWithData(null, "Книга удалена"));
+        return successMsg("Книга удалена");
     }
 
     @Operation(
@@ -325,17 +299,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -345,17 +309,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книга не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
-                                    )
-                            )
-                    ),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "404",
-                            description = "Книга не найдена",
-                            content = @Content(
-                                    schema = @Schema(implementation = ApiResponse.class),
-                                    examples = @ExampleObject(
-                                            value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книга не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_404_BOOK
                                     )
                             )
                     ),
@@ -365,7 +319,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -375,7 +329,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -385,17 +339,17 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     public ResponseEntity<ApiResponse> getBookById(@PathVariable Long id) {
         BookResponse data = BookResponse.from(bookService.getBookById(id));
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(data);
     }
 
     @Operation(
@@ -408,17 +362,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -428,17 +372,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книга не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
-                                    )
-                            )
-                    ),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "404",
-                            description = "Книги не найдены",
-                            content = @Content(
-                                    schema = @Schema(implementation = ApiResponse.class),
-                                    examples = @ExampleObject(
-                                            value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книги с указанным названием не найдены\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_404_BOOK
                                     )
                             )
                     ),
@@ -448,7 +382,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -458,7 +392,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -468,19 +402,19 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{title}")
+    @GetMapping("/title/{title}")
     public ResponseEntity<ApiResponse> getBooksByTitle(@PathVariable String title) {
         List<BookResponse> data = bookService.getBooksByTitle(title).stream()
                 .map(BookResponse::from)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(data);
     }
 
     @Operation(
@@ -493,17 +427,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -513,7 +437,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книги с указанным автором не найдены\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_404_BOOK
                                     )
                             )
                     ),
@@ -523,7 +447,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -533,7 +457,7 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -543,18 +467,18 @@ public class BookController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{author}")
+    @GetMapping("/author/{author}")
     public ResponseEntity<ApiResponse> getBooksByAuthor(@PathVariable String author) {
         List<BookResponse> data = bookService.getBooksByAuthor(author).stream()
                 .map(BookResponse::from)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(data);
     }
 }
