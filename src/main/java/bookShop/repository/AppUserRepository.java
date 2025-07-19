@@ -17,5 +17,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM AppUser u WHERE LOWER(u.username) = LOWER(:username)")
     boolean existsByUsernameIgnoreCase(@Param("username") String username);
     int countByRole(Role role);
+    Optional<AppUser> findByUsername(String username);
+    boolean existsByUsername(String username);
 }
 
