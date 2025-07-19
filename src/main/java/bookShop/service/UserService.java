@@ -5,18 +5,21 @@ import bookShop.repository.AppUserRepository;
 import bookShop.repository.LoanRepository;
 import bookShop.exception.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private static final int MAX_ADMIN_COUNT = 3;
 
     private final AppUserRepository userRepository;
     private final LoanRepository loanRepository;
@@ -24,42 +27,24 @@ public class UserService {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     public List<UserResponse> getAllUsers() {
-        List<UserResponse> users = userRepository.findAll().stream()
-                .map(user -> {
-                    UserResponse response = UserResponse.from(user);
-                    List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
-                    response.setActiveLoans(activeLoans.stream()
-                            .map(LoanResponse::from)
-                            .collect(Collectors.toList()));
-                    return response;
-                })
-                .collect(Collectors.toList());
+        List<AppUser> users = userRepository.findAll();
         if (users.isEmpty()) {
             throw new UserNotFoundException("Пользователи не найдены");
         }
-        return users;
+        return users.stream()
+                .map(this::toUserResponseWithActiveLoans)
+                .collect(Collectors.toList());
     }
 
     public UserResponse getUserResponseById(Long id) {
-        AppUser user = userRepository.findById(id)
-                .orElseThrow(UserNotFoundException::new);
-        UserResponse response = UserResponse.from(user);
-        List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
-        response.setActiveLoans(activeLoans.stream()
-                .map(LoanResponse::from)
-                .collect(Collectors.toList()));
-        return response;
+        AppUser user = findUserByIdOrThrow(id);
+        return toUserResponseWithActiveLoans(user);
     }
 
     public UserResponse getUserResponseByUsername(String username) {
         AppUser user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь с таким username не найден"));
-        UserResponse response = UserResponse.from(user);
-        List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
-        response.setActiveLoans(activeLoans.stream()
-                .map(LoanResponse::from)
-                .collect(Collectors.toList()));
-        return response;
+        return toUserResponseWithActiveLoans(user);
     }
 
     public void deleteUser(Long id) {
@@ -73,66 +58,23 @@ public class UserService {
 
     public UserResponse updateUser(Long id, RegisterRequest request, AppUserDetails userDetails) {
         log.info("Пользователь [{}] инициировал обновление пользователя [{}]", userDetails.getUsername(), id);
-        request.trimFields();
-        AppUser user = userRepository.findById(id)
-                .orElseThrow(UserNotFoundException::new);
-
-        boolean isAdmin = userDetails.getRole() == Role.ADMIN;
-        boolean isOwner = user.getId().equals(userDetails.getId());
-        if (!isAdmin && !isOwner) {
-            throw new ForbiddenActionException("Недостаточно прав для изменения пользователя");
-        }
-
-        if (!user.getUsername().equals(request.getUsername())) {
-            throw new ForbiddenActionException("Изменение username запрещено");
-        }
-
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            var violations = validator.validateProperty(request, "password");
-            if (!violations.isEmpty()) {
-                throw new ValidationException(violations.iterator().next().getMessage());
-            }
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
-        }
-
-        if (request.getPhone() != null) {
-            user.setPhone(request.getPhone());
-        }
-        if (request.getEmail() != null) {
-                user.setEmail(request.getEmail());
-        }
-
-        if (request.getRole() != null && !request.getRole().equals(user.getRole())) {
-            if (!isAdmin) {
-                throw new ForbiddenActionException("Роль могут менять только пользователи с ролью ADMIN");
-            }
-            Role oldRole = user.getRole();
-            Role newRole = request.getRole();
-            if (oldRole != Role.ADMIN && newRole == Role.ADMIN) {
-                int adminCount = userRepository.countByRole(Role.ADMIN);
-                if (adminCount >= 3) {
-                    throw new AdminLimitExceededException("В системе не может быть более 3-х админов");
-                }
-            }
-            user.setRole(newRole);
-        }
-
+        trimRequestFields(request);
+        AppUser user = findUserByIdOrThrow(id);
+        checkUpdateUserRights(user, userDetails, request);
+        updateUserFields(user, request, userDetails);
         AppUser saved = userRepository.save(user);
         log.info("Пользователь [{}] успешно обновлён", id);
-        return getUserResponseById(saved.getId());
+        return toUserResponseWithActiveLoans(saved);
     }
 
     public UserResponse createUser(RegisterRequest request) {
         log.info("Попытка создать пользователя: username={}", request.getUsername());
-        request.trimFields();
+        trimRequestFields(request);
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
         }
         if (request.getRole() == Role.ADMIN) {
-            int adminCount = userRepository.countByRole(Role.ADMIN);
-            if (adminCount >= 3) {
-                throw new AdminLimitExceededException("В системе не может быть более 3-х админов");
-            }
+            checkAdminLimit();
         }
         AppUser user = AppUser.builder()
                 .username(request.getUsername())
@@ -145,6 +87,80 @@ public class UserService {
                 .build();
         AppUser saved = userRepository.save(user);
         log.info("Пользователь создан: username={}, ID={}", saved.getUsername(), saved.getId());
-        return getUserResponseById(saved.getId());
+        return toUserResponseWithActiveLoans(saved);
+    }
+
+    private AppUser findUserByIdOrThrow(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(UserNotFoundException::new);
+    }
+
+    private UserResponse toUserResponseWithActiveLoans(AppUser user) {
+        UserResponse response = UserResponse.from(user);
+        List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
+        response.setActiveLoans(
+                activeLoans.stream()
+                        .map(LoanResponse::from)
+                        .collect(Collectors.toList())
+        );
+        return response;
+    }
+
+    private void trimRequestFields(RegisterRequest request) {
+        if (request != null) request.trimFields();
+    }
+
+    private void checkUpdateUserRights(AppUser user, AppUserDetails userDetails, RegisterRequest request) {
+        boolean isAdmin = userDetails.getRole() == Role.ADMIN;
+        boolean isOwner = user.getId().equals(userDetails.getId());
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenActionException("Недостаточно прав для изменения пользователя");
+        }
+        if (!user.getUsername().equals(request.getUsername())) {
+            throw new ForbiddenActionException("Изменение username запрещено");
+        }
+        if (request.getRole() != null && !request.getRole().equals(user.getRole())) {
+            if (!isAdmin) {
+                throw new ForbiddenActionException("Роль могут менять только пользователи с ролью ADMIN");
+            }
+        }
+    }
+
+    private void updateUserFields(AppUser user, RegisterRequest request, AppUserDetails userDetails) {
+        // password
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            var violations = validator.validateProperty(request, "password");
+            if (!violations.isEmpty()) {
+                throw new ValidationException(violations.iterator().next().getMessage());
+            }
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+        boolean isAdmin = userDetails.getRole() == Role.ADMIN;
+        boolean isOwner = user.getId().equals(userDetails.getId());
+        if (request.getPhone() != null) {
+            if (isOwner || isAdmin) {
+                user.setPhone(request.getPhone());
+            }
+        }
+        if (request.getEmail() != null) {
+            if (isOwner || isAdmin) {
+                user.setEmail(request.getEmail());
+            }
+        }
+        if (request.getRole() != null && !request.getRole().equals(user.getRole())) {
+            if (isAdmin) {
+                if (user.getRole() != Role.ADMIN && request.getRole() == Role.ADMIN) {
+                    checkAdminLimit();
+                }
+                user.setRole(request.getRole());
+            }
+        }
+    }
+
+    private void checkAdminLimit() {
+        int adminCount = userRepository.countByRole(Role.ADMIN);
+        if (adminCount >= MAX_ADMIN_COUNT) {
+            throw new AdminLimitExceededException("В системе не может быть более " + MAX_ADMIN_COUNT + "-х админов");
+        }
     }
 }

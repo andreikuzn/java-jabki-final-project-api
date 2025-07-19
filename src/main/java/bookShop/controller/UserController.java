@@ -1,7 +1,6 @@
 package bookShop.controller;
 
 import bookShop.model.RegisterRequest;
-import bookShop.model.UserResponse;
 import bookShop.model.AppUserDetails;
 import bookShop.model.ApiResponse;
 import bookShop.service.UserService;
@@ -16,7 +15,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
-import java.util.List;
+
+import static bookShop.util.ApiResponseUtil.*;
+import static bookShop.util.SwaggerResponses.*;
+
 
 @Tag(name = "Пользователи", description = "Управление пользователями")
 @RestController
@@ -36,17 +38,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -56,7 +48,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_FOUND\", \"message\": \"Пользователи не найдены\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                            value = STATUS_404_USER
                                     )
                             )
                     ),
@@ -66,7 +58,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -76,7 +68,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -86,7 +78,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -95,8 +87,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<ApiResponse> getAllUsers() {
-        List<UserResponse> data = userService.getAllUsers();
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(userService.getAllUsers());
     }
 
     @Operation(
@@ -109,17 +100,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -129,7 +110,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -139,7 +120,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -148,8 +129,7 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse> getMe(Authentication authentication) {
         AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
-        UserResponse data = userService.getUserResponseById(userDetails.getId());
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(userService.getUserResponseById(userDetails.getId()));
     }
 
     @Operation(
@@ -162,17 +142,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": "Пользователь успешно обновлён",
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_MSG_USER
                                     )
                             )
                     ),
@@ -182,7 +152,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"VALIDATION_ERROR\", \"message\": \"Некорректные данные\", \"status\": 400, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_400_VALIDATION
                                     )
                             )
                     ),
@@ -192,7 +162,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -202,7 +172,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -212,7 +182,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_FOUND\", \"message\": \"Пользователь не найден\", \"status\": 404, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_404_USER
                                     )
                             )
                     ),
@@ -222,7 +192,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -234,8 +204,7 @@ public class UserController {
                                                   @Valid @RequestBody RegisterRequest request,
                                                   Authentication authentication) {
         AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
-        UserResponse data = userService.updateUser(id, request, userDetails);
-        return ResponseEntity.ok(ApiResponse.successWithData(data, "Пользователь успешно обновлён"));
+        return success(userService.updateUser(id, request, userDetails), "Пользователь успешно обновлён");
     }
 
     @Operation(
@@ -248,17 +217,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": "Пользователь успешно создан",
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_MSG_USER
                                     )
                             )
                     ),
@@ -268,7 +227,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"VALIDATION_ERROR\", \"message\": \"Некорректные данные\", \"status\": 400, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_400_VALIDATION
                                     )
                             )
                     ),
@@ -278,7 +237,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -288,7 +247,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -298,7 +257,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -307,8 +266,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse> createUser(@Valid @RequestBody RegisterRequest request) {
-        UserResponse data = userService.createUser(request);
-        return ResponseEntity.ok(ApiResponse.successWithData(data, "Пользователь успешно создан"));
+        return success(userService.createUser(request), "Пользователь успешно создан");
     }
 
     @Operation(
@@ -321,17 +279,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": "Пользователь удалён",
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_MSG_USER
                                     )
                             )
                     ),
@@ -341,7 +289,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -351,7 +299,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -361,7 +309,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_FOUND\", \"message\": \"Пользователь не найден\", \"status\": 404, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_404_USER
                                     )
                             )
                     ),
@@ -371,7 +319,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -381,7 +329,7 @@ public class UserController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
-        return ResponseEntity.ok(ApiResponse.successWithData(null, "Пользователь удалён"));
+        return successMsg("Пользователь удалён");
     }
 
     @Operation(
@@ -394,17 +342,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -414,7 +352,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_FOUND\", \"message\": \"Пользователь не найден\", \"status\": 404, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_404_USER
                                     )
                             )
                     ),
@@ -424,7 +362,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -434,7 +372,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -444,7 +382,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -453,8 +391,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse> getUserById(@PathVariable Long id) {
-        UserResponse data = userService.getUserResponseById(id);
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(userService.getUserResponseById(id));
     }
 
     @Operation(
@@ -467,17 +404,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -487,7 +414,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_FOUND\", \"message\": \"Пользователь не найден\", \"status\": 404, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_404_USER
                                     )
                             )
                     ),
@@ -497,7 +424,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -507,7 +434,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -517,7 +444,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:10:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -526,7 +453,6 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{username}")
     public ResponseEntity<ApiResponse> getUserByUsername(@PathVariable String username) {
-        UserResponse data = userService.getUserResponseByUsername(username);
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(userService.getUserResponseByUsername(username));
     }
 }

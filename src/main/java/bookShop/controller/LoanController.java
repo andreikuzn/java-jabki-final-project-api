@@ -14,12 +14,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static bookShop.util.ApiResponseUtil.success;
+import static bookShop.util.SwaggerResponses.*;
 
 @Tag(name = "Выдача книг", description = "Выдача и возврат книг")
 @RestController
@@ -39,17 +41,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": "Книга успешно выдана",
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_MSG_LOAN_ISSUE
                                     )
                             )
                     ),
@@ -61,11 +53,11 @@ public class LoanController {
                                     examples = {
                                             @ExampleObject(
                                                     name = "Лимит книг",
-                                                    value = "{ \"error\": \"BOOK_LOAN_LIMIT_EXCEEDED\", \"message\": \"Превышен лимит книг для вашего уровня лояльности\", \"status\": 400, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_400_LIMIT_EXCEEDED
                                             ),
                                             @ExampleObject(
                                                     name = "Нет экземпляров",
-                                                    value = "{ \"error\": \"BOOK_UNAVAILABLE\", \"message\": \"Нет доступных экземпляров книги\", \"status\": 400, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_400_BOOK_UNAVAILABLE
                                             )
                                     }
                             )
@@ -76,7 +68,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -86,7 +78,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -98,11 +90,11 @@ public class LoanController {
                                     examples = {
                                             @ExampleObject(
                                                     name = "Книга не найдена",
-                                                    value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книга не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_404_BOOK
                                             ),
                                             @ExampleObject(
                                                     name = "Пользователь не найден",
-                                                    value = "{ \"error\": \"USER_NOT_FOUND\", \"message\": \"Пользователь не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_404_USER
                                             )
                                     }
                             )
@@ -113,7 +105,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -125,9 +117,8 @@ public class LoanController {
             Authentication authentication
     ) {
         AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
-        Long userId = userDetails.getId();
-        LoanResponse data = LoanResponse.from(loanService.issueBook(bookId, userId));
-        return ResponseEntity.ok(ApiResponse.successWithData(data, "Книга успешно выдана"));
+        LoanResponse data = LoanResponse.from(loanService.issueBook(bookId, userDetails.getId()));
+        return success(data, "Книга успешно выдана");
     }
 
     @Operation(
@@ -140,17 +131,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": "Книга успешно возвращена",
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_MSG_LOAN_RETURN
                                     )
                             )
                     ),
@@ -160,7 +141,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"LOAN_ALREADY_RETURNED\", \"message\": \"Книга уже возвращена\", \"status\": 400, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_400_ALREADY_RETURNED
                                     )
                             )
                     ),
@@ -170,7 +151,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -180,7 +161,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -192,11 +173,11 @@ public class LoanController {
                                     examples = {
                                             @ExampleObject(
                                                     name = "Выдача не найдена",
-                                                    value = "{ \"error\": \"LOAN_NOT_FOUND\", \"message\": \"Выдача книги не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_404_LOAN
                                             ),
                                             @ExampleObject(
                                                     name = "Пользователь не найден",
-                                                    value = "{ \"error\": \"USER_NOT_FOUND\", \"message\": \"Пользователь не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_404_USER
                                             )
                                     }
                             )
@@ -207,7 +188,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -219,9 +200,8 @@ public class LoanController {
             Authentication authentication
     ) {
         AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
-        Long userId = userDetails.getId();
-        LoanResponse data = LoanResponse.from(loanService.returnBook(loanId, userId));
-        return ResponseEntity.ok(ApiResponse.successWithData(data, "Книга успешно возвращена"));
+        LoanResponse data = LoanResponse.from(loanService.returnBook(loanId, userDetails.getId()));
+        return success(data, "Книга успешно возвращена");
     }
 
     @Operation(
@@ -230,21 +210,11 @@ public class LoanController {
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "200",
-                            description = "Список займов",
+                            description = "Список выдач",
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -254,7 +224,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"LOAN_NOT_FOUND\", \"message\": \"Выдача книги не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_404_LOAN
                                     )
                             )
                     ),
@@ -264,7 +234,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -274,7 +244,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -283,12 +253,11 @@ public class LoanController {
     @GetMapping("/my")
     public ResponseEntity<ApiResponse> myLoans(Authentication authentication) {
         AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
-        Long userId = userDetails.getId();
-        List<LoanResponse> data = loanService.getActiveLoans(userId)
+        List<LoanResponse> data = loanService.getActiveLoans(userDetails.getId())
                 .stream()
                 .map(LoanResponse::from)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(data);
     }
 
     @Operation(
@@ -301,17 +270,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -323,11 +282,11 @@ public class LoanController {
                                     examples = {
                                             @ExampleObject(
                                                     name = "Выдача не найдена",
-                                                    value = "{ \"error\": \"LOAN_NOT_FOUND\", \"message\": \"Выдача книги не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_404_LOAN
                                             ),
                                             @ExampleObject(
                                                     name = "Книга не найдена",
-                                                    value = "{ \"error\": \"BOOK_NOT_FOUND\", \"message\": \"Книги не найдены\", \"status\": 404, \"timestamp\": \"2025-07-21T13:00:00.000\", \"data\": null }"
+                                                    value = STATUS_404_BOOK
                                             )
                                     }
                             )
@@ -338,7 +297,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -348,7 +307,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -358,7 +317,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -371,7 +330,7 @@ public class LoanController {
                 .stream()
                 .map(LoanResponse::from)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(data);
     }
 
     @Operation(
@@ -384,17 +343,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = """
-{
-  "error": null,
-  "message": null,
-  "status": 200,
-  "timestamp": "2025-07-21T13:00:00.000",
-  "data": [
-    { ... }
-  ]
-}
-"""
+                                            value = STATUS_200_LIST
                                     )
                             )
                     ),
@@ -406,11 +355,11 @@ public class LoanController {
                                     examples = {
                                             @ExampleObject(
                                                     name = "Выдача не найдена",
-                                                    value = "{ \"error\": \"LOAN_NOT_FOUND\", \"message\": \"Выдача книги не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_404_LOAN
                                             ),
                                             @ExampleObject(
                                                     name = "Пользователь не найден",
-                                                    value = "{ \"error\": \"USER_NOT_FOUND\", \"message\": \"Пользователь не найдена\", \"status\": 404, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                                    value = STATUS_404_USER
                                             )
                                     }
                             )
@@ -421,7 +370,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"USER_NOT_AUTHENTICATED\", \"message\": \"Пользователь не авторизован в системе\", \"status\": 401, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_401
                                     )
                             )
                     ),
@@ -431,7 +380,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"FORBIDDEN\", \"message\": \"Действие запрещено: недостаточно прав\", \"status\": 403, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_403
                                     )
                             )
                     ),
@@ -441,7 +390,7 @@ public class LoanController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = "{ \"error\": \"INTERNAL_ERROR\", \"message\": \"Произошла внутренняя ошибка сервера\", \"status\": 500, \"timestamp\": \"2025-07-21T14:00:00.000\", \"data\": null }"
+                                            value = STATUS_500
                                     )
                             )
                     )
@@ -454,6 +403,6 @@ public class LoanController {
                 .stream()
                 .map(LoanResponse::from)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.successWithData(data, null));
+        return success(data);
     }
 }

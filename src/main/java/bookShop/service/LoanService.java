@@ -5,50 +5,32 @@ import bookShop.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import bookShop.exception.UserNotFoundException;
-import bookShop.exception.BookNotFoundException;
-import bookShop.exception.BookUnavailableException;
-import bookShop.exception.BookLoanLimitExceededException;
-import bookShop.exception.LoanNotFoundException;
-import bookShop.exception.ForbiddenActionException;
-import  bookShop.exception.LoanAlreadyReturnedException;
-import bookShop.exception.BookPriceLimitExceededException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.util.List;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LoanService {
 
     private final LoanRepository loanRepository;
     private final BookRepository bookRepository;
     private final AppUserRepository appUserRepository;
     private final LoyaltyService loyaltyService;
+    private final bookShop.validation.LoanValidator loanValidator;
 
     @Transactional
     public Loan issueBook(Long bookId, Long userId) {
         log.info("Пользователь [{}] берёт книгу [{}]", userId, bookId);
-        AppUser user = appUserRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new BookNotFoundException("Книга не найдена"));
+        AppUser user = loanValidator.validateAndGetUser(userId);
+        Book book = loanValidator.validateAndGetBook(bookId);
         LoyaltyLevel level = user.getLoyaltyLevel();
-        int currentActiveLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(userId).size();
-        if (user.getLoyaltyPoints() < 0) {
-            level = LoyaltyLevel.NOVICE;
-        }
-        if (currentActiveLoans >= level.getMaxBooks()) {
-            throw new BookLoanLimitExceededException("Превышен лимит книг для вашего уровня лояльности (" + level.getTitle() + ")");
-        }
-        if (book.getPrice() > level.getMaxBookPrice()) {
-            throw new BookPriceLimitExceededException("Стоимость книги превышает разрешенную для вашего уровня (" + level.getTitle() + ")");
-        }
-        if (book.getCopiesAvailable() <= 0) {
-            throw new BookUnavailableException("Нет доступных экземпляров книги");
-        }
+        if (user.getLoyaltyPoints() < 0) level = LoyaltyLevel.NOVICE;
+        loanValidator.checkActiveLoansLimit(user, level);
+        loanValidator.checkBookPriceLimit(book, level);
+        loanValidator.checkBookAvailability(book);
         book.setCopiesAvailable(book.getCopiesAvailable() - 1);
         bookRepository.save(book);
         Loan loan = Loan.builder()
@@ -64,25 +46,14 @@ public class LoanService {
     @Transactional
     public Loan returnBook(Long loanId, Long userId) {
         log.info("Пользователь [{}] возвращает книгу по выдаче [{}]", userId, loanId);
-        AppUser user = appUserRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-        Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new LoanNotFoundException("Выдача книги не найдена"));
-        if (!loan.getAppUser().getId().equals(userId)) {
-            throw new ForbiddenActionException("Вы не можете вернуть чужую книгу");
-        }
-        if (loan.getReturnedDate() != null) {
-            throw new LoanAlreadyReturnedException("Книга уже возвращена");
-        }
+        AppUser user = loanValidator.validateAndGetUser(userId);
+        Loan loan = loanValidator.validateAndGetLoan(loanId);
+        loanValidator.checkLoanOwnership(loan, userId);
+        loanValidator.checkLoanNotReturned(loan);
         loan.setReturnedDate(LocalDate.now());
         boolean overdue = loan.getReturnedDate().isAfter(loan.getDueDate());
-        if (overdue) {
-            user.setLoyaltyPoints(user.getLoyaltyPoints() - 2);
-        } else {
-            user.setLoyaltyPoints(user.getLoyaltyPoints() + 1);
-        }
-        LoyaltyLevel newLevel = loyaltyService.calculateLevel(user.getLoyaltyPoints());
-        user.setLoyaltyLevel(newLevel);
+        user.setLoyaltyPoints(user.getLoyaltyPoints() + (overdue ? -2 : 1));
+        user.setLoyaltyLevel(loyaltyService.calculateLevel(user.getLoyaltyPoints()));
         appUserRepository.save(user);
         loanRepository.save(loan);
         Book book = loan.getBook();
@@ -93,20 +64,16 @@ public class LoanService {
     }
 
     public List<Loan> getActiveLoans(Long userId) {
-        if (!appUserRepository.existsById(userId)) {
-            throw new UserNotFoundException("Пользователь не найден");
-        }
+        loanValidator.validateAndGetUser(userId);
         List<Loan> loans = loanRepository.findByAppUserIdAndReturnedDateIsNull(userId);
-        if (loans.isEmpty()) throw new LoanNotFoundException("Выдачи не найдены");
+        loanValidator.checkLoansNotEmpty(loans);
         return loans;
     }
 
     public List<Loan> getActiveLoansByBook(Long bookId) {
-        if (!bookRepository.existsById(bookId)) {
-            throw new BookNotFoundException("Книга не найдена");
-        }
+        loanValidator.validateAndGetBook(bookId);
         List<Loan> loans = loanRepository.findByBookIdAndReturnedDateIsNull(bookId);
-        if (loans.isEmpty()) throw new LoanNotFoundException("Выдачи не найдены");
+        loanValidator.checkLoansNotEmpty(loans);
         return loans;
     }
 }
