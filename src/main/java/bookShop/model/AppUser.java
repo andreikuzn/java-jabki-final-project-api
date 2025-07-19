@@ -15,9 +15,9 @@ public class AppUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 32)
     private String username;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String password;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -28,4 +28,8 @@ public class AppUser {
     private LoyaltyLevel loyaltyLevel = LoyaltyLevel.NOVICE;
     @OneToMany(mappedBy = "appUser", fetch = FetchType.EAGER)
     private List<Loan> loans;
+    @Column(nullable = false, length = 11)
+    private String phone;
+    @Column(nullable = false, length = 255)
+    private String email;
 }

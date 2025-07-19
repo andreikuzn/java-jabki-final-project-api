@@ -64,6 +64,8 @@ public class LoanService {
     @Transactional
     public Loan returnBook(Long loanId, Long userId) {
         log.info("Пользователь [{}] возвращает книгу по выдаче [{}]", userId, loanId);
+        AppUser user = appUserRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
         Loan loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new LoanNotFoundException("Выдача книги не найдена"));
         if (!loan.getAppUser().getId().equals(userId)) {
@@ -73,7 +75,6 @@ public class LoanService {
             throw new LoanAlreadyReturnedException("Книга уже возвращена");
         }
         loan.setReturnedDate(LocalDate.now());
-        AppUser user = loan.getAppUser();
         boolean overdue = loan.getReturnedDate().isAfter(loan.getDueDate());
         if (overdue) {
             user.setLoyaltyPoints(user.getLoyaltyPoints() - 2);
@@ -92,10 +93,20 @@ public class LoanService {
     }
 
     public List<Loan> getActiveLoans(Long userId) {
-        return loanRepository.findByAppUserIdAndReturnedDateIsNull(userId);
+        if (!appUserRepository.existsById(userId)) {
+            throw new UserNotFoundException("Пользователь не найден");
+        }
+        List<Loan> loans = loanRepository.findByAppUserIdAndReturnedDateIsNull(userId);
+        if (loans.isEmpty()) throw new LoanNotFoundException("Выдачи не найдены");
+        return loans;
     }
 
     public List<Loan> getActiveLoansByBook(Long bookId) {
-        return loanRepository.findByBookIdAndReturnedDateIsNull(bookId);
+        if (!bookRepository.existsById(bookId)) {
+            throw new BookNotFoundException("Книга не найдена");
+        }
+        List<Loan> loans = loanRepository.findByBookIdAndReturnedDateIsNull(bookId);
+        if (loans.isEmpty()) throw new LoanNotFoundException("Выдачи не найдены");
+        return loans;
     }
 }

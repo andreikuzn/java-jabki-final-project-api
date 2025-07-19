@@ -31,6 +31,22 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("VALIDATION_ERROR", sb.toString(), 400));
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
+        log.warn("Доступ запрещён: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("FORBIDDEN", "Действие запрещено: недостаточно прав", 403));
+    }
+
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ApiResponse> handleAuthException(org.springframework.security.core.AuthenticationException ex) {
+        log.warn("Пользователь не авторизован: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("USER_NOT_AUTHENTICATED", "Пользователь не авторизован в системе", 401));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse> handleOtherExceptions(Exception ex) {
         log.error("Необработанная ошибка: ", ex);

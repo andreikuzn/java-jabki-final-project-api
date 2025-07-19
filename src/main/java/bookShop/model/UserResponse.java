@@ -12,6 +12,8 @@ public class UserResponse {
     private String role;
     private int loyaltyPoints;
     private String loyaltyLevel;
+    private String phone;
+    private String email;
     private List<LoanResponse> activeLoans;
 
     public static UserResponse from(AppUser user) {
@@ -21,6 +23,8 @@ public class UserResponse {
         dto.setRole(user.getRole().name());
         dto.setLoyaltyPoints(user.getLoyaltyPoints());
         dto.setLoyaltyLevel(user.getLoyaltyLevel().getTitle());
+        dto.setPhone(user.getPhone());
+        dto.setEmail(user.getEmail());
         dto.setActiveLoans(
                 user.getLoans() == null ? List.of() :
                         user.getLoans().stream()

@@ -18,7 +18,9 @@ public class BookService {
     private final BookRepository bookRepository;
 
     public List<Book> getAllBooks() {
-        return bookRepository.findAll();
+        List<Book> books = bookRepository.findAll();
+        if (books.isEmpty()) throw new BookNotFoundException("Книги не найдены");
+        return books;
     }
 
     public Book getBookById(Long id) {

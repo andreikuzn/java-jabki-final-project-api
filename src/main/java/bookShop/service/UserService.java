@@ -24,7 +24,7 @@ public class UserService {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
+        List<UserResponse> users = userRepository.findAll().stream()
                 .map(user -> {
                     UserResponse response = UserResponse.from(user);
                     List<Loan> activeLoans = loanRepository.findByAppUserIdAndReturnedDateIsNull(user.getId());
@@ -34,6 +34,10 @@ public class UserService {
                     return response;
                 })
                 .collect(Collectors.toList());
+        if (users.isEmpty()) {
+            throw new UserNotFoundException("Пользователи не найдены");
+        }
+        return users;
     }
 
     public UserResponse getUserResponseById(Long id) {
@@ -91,7 +95,17 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
 
-        if (request.getRole() != null && isAdmin) {
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        if (request.getEmail() != null) {
+                user.setEmail(request.getEmail());
+        }
+
+        if (request.getRole() != null && !request.getRole().equals(user.getRole())) {
+            if (!isAdmin) {
+                throw new ForbiddenActionException("Роль могут менять только пользователи с ролью ADMIN");
+            }
             Role oldRole = user.getRole();
             Role newRole = request.getRole();
             if (oldRole != Role.ADMIN && newRole == Role.ADMIN) {
@@ -124,11 +138,13 @@ public class UserService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
+                .phone(request.getPhone())
+                .email(request.getEmail())
                 .loyaltyPoints(0)
                 .loyaltyLevel(LoyaltyLevel.NOVICE)
                 .build();
         AppUser saved = userRepository.save(user);
-        log.info("Пользователь создан: username={}", request.getUsername());
+        log.info("Пользователь создан: username={}, ID={}", saved.getUsername(), saved.getId());
         return getUserResponseById(saved.getId());
     }
 }

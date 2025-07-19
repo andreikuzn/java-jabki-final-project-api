@@ -5,6 +5,8 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import javax.validation.constraints.NotNull;
 import bookShop.validation.ValidPassword;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Email;
 
 @Data
 @NoArgsConstructor
@@ -20,8 +22,18 @@ public class RegisterRequest {
     @NotNull(message = "Роль пользователя обязательна")
     private Role role;
 
+    @NotBlank(message = "Поле телефон пользователя не должно быть пустым")
+    @Pattern(regexp = "\\d{11}", message = "Телефон должен состоять ровно из 11 цифр")
+    private String phone;
+
+    @NotBlank(message = "Поле email пользователя не должно быть пустым")
+    @Email(message = "Некорректный email")
+    private String email;
+
     public void trimFields() {
         if (username != null) username = username.trim();
         if (password != null) password = password.trim();
+        if (phone != null) phone = phone.trim();
+        if (email != null) email = email.trim();
     }
 }

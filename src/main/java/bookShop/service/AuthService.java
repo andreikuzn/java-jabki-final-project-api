@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import bookShop.model.AuthResponse;
 import bookShop.model.AuthRequest;
+import bookShop.model.UserResponse;
 import bookShop.exception.InvalidCredentialsException;
 import bookShop.exception.*;
 import javax.validation.Validation;
@@ -30,7 +31,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
-    public void register(RegisterRequest request) {
+    public UserResponse register(RegisterRequest request) {
         log.info("Регистрация пользователя: {}", request.getUsername());
         request.trimFields();
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -50,11 +51,14 @@ public class AuthService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
+                .phone(request.getPhone())
+                .email(request.getEmail())
                 .loyaltyPoints(0)
                 .loyaltyLevel(LoyaltyLevel.NOVICE)
                 .build();
-        userRepository.save(user);
-        log.info("Пользователь [{}] успешно зарегистрирован", request.getUsername());
+        AppUser saved = userRepository.save(user);
+        log.info("Пользователь [{}] ID [{}] успешно зарегистрирован", saved.getUsername(), saved.getId());
+        return UserResponse.from(saved);
     }
 
     public AuthResponse login(AuthRequest request) {
