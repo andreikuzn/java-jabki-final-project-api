@@ -14,10 +14,30 @@ public class SwaggerResponses {
 }
 """;
 
-    public static final String STATUS_200_MSG_USER = """
+    public static final String STATUS_200_MSG_USER_UPDATED = """
 {
   "error": null,
   "message": "Пользователь успешно обновлён",
+  "status": 200,
+  "timestamp": "2025-07-21T14:10:00.000",
+  "data": { ... }
+}
+""";
+
+    public static final String STATUS_200_MSG_USER_CREATED = """
+{
+  "error": null,
+  "message": "Пользователь успешно создан",
+  "status": 200,
+  "timestamp": "2025-07-21T14:10:00.000",
+  "data": { ... }
+}
+""";
+
+    public static final String STATUS_200_MSG_USER_DELETED = """
+{
+  "error": null,
+  "message": "Пользователь удален",
   "status": 200,
   "timestamp": "2025-07-21T14:10:00.000",
   "data": { ... }

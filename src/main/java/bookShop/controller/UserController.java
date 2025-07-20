@@ -142,7 +142,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = STATUS_200_MSG_USER
+                                            value = STATUS_200_MSG_USER_UPDATED
                                     )
                             )
                     ),
@@ -199,7 +199,7 @@ public class UserController {
             }
     )
     @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
-    @PutMapping("/Id/{id}")
+    @PutMapping("/id/{id}")
     public ResponseEntity<ApiResponse> updateUser(@PathVariable Long id,
                                                   @Valid @RequestBody RegisterRequest request,
                                                   Authentication authentication) {
@@ -217,7 +217,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = STATUS_200_MSG_USER
+                                            value = STATUS_200_MSG_USER_CREATED
                                     )
                             )
                     ),
@@ -279,7 +279,7 @@ public class UserController {
                             content = @Content(
                                     schema = @Schema(implementation = ApiResponse.class),
                                     examples = @ExampleObject(
-                                            value = STATUS_200_MSG_USER
+                                            value = STATUS_200_MSG_USER_DELETED
                                     )
                             )
                     ),
@@ -326,7 +326,7 @@ public class UserController {
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/Id/{id}")
+    @DeleteMapping("/id/{id}")
     public ResponseEntity<ApiResponse> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return successMsg("Пользователь удалён");
@@ -389,7 +389,7 @@ public class UserController {
             }
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/Id/{id}")
+    @GetMapping("/id/{id}")
     public ResponseEntity<ApiResponse> getUserById(@PathVariable Long id) {
         return success(userService.getUserById(id));
     }
