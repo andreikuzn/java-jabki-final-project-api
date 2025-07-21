@@ -29,12 +29,14 @@ public class BookService {
     }
 
     public List<Book> getBooksByTitle(String title) {
+        title = (title != null) ? title.trim() : null;
         List<Book> books = bookRepository.findByTitleIgnoreCaseLike(title);
         if (books.isEmpty()) throw new BookNotFoundException("Книги с указанным названием не найдены");
         return books;
     }
 
     public List<Book> getBooksByAuthor(String author) {
+        author = (author != null) ? author.trim() : null;
         List<Book> books = bookRepository.findByAuthorIgnoreCaseLike(author);
         if (books.isEmpty()) throw new BookNotFoundException("Книги с указанным автором не найдены");
         return books;

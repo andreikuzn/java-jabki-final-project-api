@@ -2,7 +2,7 @@ package bookShop.exception;
 
 import lombok.*;
 
-@lombok.Getter
+@Getter
 public class ApiException extends RuntimeException {
     private final String errorCode;
     private final int status;

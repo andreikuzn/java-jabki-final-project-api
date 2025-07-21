@@ -62,14 +62,13 @@ public class AuthService {
     }
 
     public AuthResponse login(AuthRequest request) {
+        request.trimFields();
         log.info("Попытка входа пользователя: {}", request.getUsername());
         AppUser user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException("Неверный логин или пароль");
         }
-
         String token = jwtUtil.generateToken(new AppUserDetails(user));
         log.info("Пользователь [{}] успешно вошёл в систему", request.getUsername());
         return new AuthResponse(token, user.getId(), user.getRole().name());

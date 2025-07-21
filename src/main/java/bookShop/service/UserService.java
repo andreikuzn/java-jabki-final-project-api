@@ -42,6 +42,7 @@ public class UserService {
     }
 
     public List<UserResponse> getUsersByUsername(String username) {
+        username = (username != null) ? username.trim() : null;
         List<AppUser> users = userRepository.findByUsernameIgnoreCaseLike(username);
         if (users.isEmpty()) {
             throw new UserNotFoundException("Пользователи с таким username не найдены");
@@ -50,6 +51,7 @@ public class UserService {
     }
 
     public UserResponse getUserByUsername(String username) {
+        username = (username != null) ? username.trim() : null;
         AppUser user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь с таким username не найден"));
         return toUserResponseWithActiveLoans(user);
