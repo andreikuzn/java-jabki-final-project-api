@@ -7,6 +7,7 @@ import javax.validation.constraints.NotNull;
 import bookShop.validation.ValidPassword;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Email;
+import bookShop.validation.NoEmojiNoXss;
 
 @Data
 @NoArgsConstructor
@@ -14,9 +15,11 @@ import javax.validation.constraints.Email;
 public class RegisterRequest {
     @NotBlank(message = "Имя пользователя не должно быть пустым")
     @Size(min = 2, max = 32, message = "Имя пользователя должно быть от 2 до 32 символов")
+    @NoEmojiNoXss
     private String username;
 
     @ValidPassword
+    @NoEmojiNoXss
     private String password;
 
     @NotNull(message = "Роль пользователя обязательна")
@@ -28,6 +31,10 @@ public class RegisterRequest {
 
     @NotBlank(message = "Поле email пользователя не должно быть пустым")
     @Email(message = "Некорректный email")
+    @Pattern(
+            regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+            message = "Некорректный email"
+    )
     private String email;
 
     public void trimFields() {

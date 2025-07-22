@@ -11,6 +11,8 @@ public class PasswordValidator implements ConstraintValidator<ValidPassword, Str
         if (password.length() < 6 || password.length() > 64) return false;
         if (!password.matches("^[A-Za-z\\d!@#$%^&*()_+\\-={}:;\"'<>,.?\\[\\]\\\\|`~/.]+$")) return false;
         if (!password.matches(".*[A-Z].*")) return false;
+        if (!password.matches(".*[a-z].*")) return false;
+        if (!password.matches(".*\\d.*")) return false;
         if (!password.matches(".*[!@#$%^&*()_+\\-={}:;\"'<>,.?\\[\\]\\\\|`~/.].*")) return false;
         return true;
     }

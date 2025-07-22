@@ -9,7 +9,7 @@ import java.lang.annotation.*;
 @Target({ ElementType.FIELD, ElementType.PARAMETER })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidPassword {
-    String message() default "Пароль должен быть от 6 до 64 символов, только латинские буквы, минимум одна заглавная буква и один спецсимвол";
+    String message() default "Пароль должен быть от 6 до 64 символов, только латинские буквы, минимум одна заглавная буква, один спецсимвол и одна цифра";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }
