@@ -3,6 +3,7 @@ package bookShop.model.response;
 import lombok.Data;
 import java.util.List;
 import java.util.stream.Collectors;
+import bookShop.model.AppUser;
 
 @Data
 public class UserResponse {
@@ -13,9 +14,9 @@ public class UserResponse {
     private String loyaltyLevel;
     private String phone;
     private String email;
-    private List<bookShop.model.response.LoanResponse> activeLoans;
+    private List<LoanResponse> activeLoans;
 
-    public static UserResponse from(bookShop.model.AppUser user) {
+    public static UserResponse from(AppUser user) {
         UserResponse dto = new UserResponse();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
@@ -28,7 +29,7 @@ public class UserResponse {
                 user.getLoans() == null ? List.of() :
                         user.getLoans().stream()
                                 .filter(l -> l.getReturnedDate() == null)
-                                .map(bookShop.model.response.LoanResponse::from)
+                                .map(LoanResponse::from)
                                 .collect(Collectors.toList())
         );
         return dto;
