@@ -1,8 +1,8 @@
-package bookShop.apiTests.auth.util;
+package bookShop.apiTests.util;
 
 import io.restassured.response.Response;
-import bookShop.apiTests.auth.model.RegisterRequest ;
-import bookShop.apiTests.auth.model.AuthRequest ;
+import bookShop.apiTests.model.RegisterRequest;
+import bookShop.apiTests.model.AuthRequest;
 import bookShop.apiTests.common.TestDataUtil;
 
 import static bookShop.model.Role.USER;

@@ -1,7 +1,7 @@
-package bookShop.apiTests.auth.tests;
+package bookShop.apiTests.tests.auth;
 
 import bookShop.apiTests.common.BaseIntegrationTest;
-import bookShop.apiTests.auth.model.RegisterRequest ;
+import bookShop.apiTests.model.RegisterRequest;
 import bookShop.apiTests.common.ApiResponseAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +20,35 @@ import java.util.ArrayList;
 import java.util.List;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import bookShop.apiTests.enums.ApiError;
+import bookShop.apiTests.enums.ErrorMessage;
+import bookShop.apiTests.enums.ApiError;
+import bookShop.apiTests.enums.ApiHeader;
+import bookShop.apiTests.enums.ApiPath;
+import bookShop.apiTests.enums.ErrorMessage;
+import bookShop.apiTests.enums.JsonPathKey;
 
+import static bookShop.apiTests.enums.ApiError.FORBIDDEN;
+import static bookShop.apiTests.enums.ApiError.METHOD_NOT_ALLOWED;
+import static bookShop.apiTests.enums.ApiError.NOT_FOUND;
+import static bookShop.apiTests.enums.ApiError.OK;
+import static bookShop.apiTests.enums.ApiError.UNSUPPORTED_MEDIA_TYPE;
+import static bookShop.apiTests.enums.ApiError.USER_ALREADY_EXISTS;
+import static bookShop.apiTests.enums.ApiPath.AUTH_REGISTER;
+import static bookShop.apiTests.enums.ApiPath.AUTH_REGISTER_NOT_EXIST;
+import static bookShop.apiTests.enums.ErrorMessage.ADMIN_LIMIT;
+import static bookShop.apiTests.enums.ErrorMessage.EMAIL_EMPTY;
+import static bookShop.apiTests.enums.ErrorMessage.EMAIL_FORMAT;
+import static bookShop.apiTests.enums.ErrorMessage.EMAIL_LENGTH;
+import static bookShop.apiTests.enums.ErrorMessage.EMPTY_PASSWORD;
+import static bookShop.apiTests.enums.ErrorMessage.EMPTY_USERNAME;
+import static bookShop.apiTests.enums.ErrorMessage.ENDPOINT_NOT_FOUND;
+import static bookShop.apiTests.enums.ErrorMessage.FORBIDDEN_CHARS;
+import static bookShop.apiTests.enums.ErrorMessage.INVALID_OR_EMPTY_JSON;
+import static bookShop.apiTests.enums.ErrorMessage.PHONE_EMPTY;
+import static bookShop.apiTests.enums.ErrorMessage.PHONE_INVALID;
+import static bookShop.apiTests.enums.ErrorMessage.USERNAME_LENGTH;
+import static bookShop.apiTests.enums.JsonPathKey.DATA_ID;
 import static bookShop.model.Role.USER;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -127,9 +155,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
 
     static Stream<Arguments> invalidPhoneEmptyCases() {
         return Stream.of(
-                Arguments.of(null, "phone: Поле телефон пользователя не должно быть пустым; "),
-                Arguments.of("", "phone: Поле телефон пользователя не должно быть пустым; "),
-                Arguments.of(" ", "phone: Поле телефон пользователя не должно быть пустым; ")
+                Arguments.of(null, PHONE_EMPTY.getMsg()),
+                Arguments.of("", PHONE_EMPTY.getMsg()),
+                Arguments.of(" ", PHONE_EMPTY.getMsg())
         );
     }
 
@@ -177,21 +205,20 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .username(username)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
-        // Для null возвращается assertError, для остальных assertErrorPartly
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         if (username == null) {
             ApiResponseAssert.assertError(
                     response,
-                    400,
-                    "VALIDATION_ERROR",
-                    "username: Имя пользователя не должно быть пустым; "
+                    ApiError.BAD_REQUEST.getStatus(),
+                    ApiError.BAD_REQUEST.getCode(),
+                    EMPTY_USERNAME.getMsg()
             );
         } else {
             ApiResponseAssert.assertErrorPartly(
                     response,
-                    400,
-                    "VALIDATION_ERROR",
-                    "username: Имя пользователя не должно быть пустым; "
+                    ApiError.BAD_REQUEST.getStatus(),
+                    ApiError.BAD_REQUEST.getCode(),
+                    EMPTY_USERNAME.getMsg()
             );
         }
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
@@ -212,7 +239,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         request.put("email", email);
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     email,
@@ -220,7 +247,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.name(),
                     phone
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     String.valueOf(usernameAsInt),
@@ -249,12 +276,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 + "\"email\": \"" + email + "\""
                 + "}";
         long countBefore = appUserRepository.count();
-        Response response = apiHelper.post("/auth/register", badRequestJson);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "Некорректный или пустой JSON"
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                INVALID_OR_EMPTY_JSON.getMsg()
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -266,12 +293,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .username("a")
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "username: Имя пользователя должно быть от 2 до 32 символов; "
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                USERNAME_LENGTH.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
@@ -284,7 +311,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -292,7 +319,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -315,7 +342,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -323,7 +350,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -342,14 +369,14 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     @DisplayName("Register: username = 33 символа")
     void registerWithUsername33Symbols() {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
-                .username("b".repeat(323))
+                .username("b".repeat(33))
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "username: Имя пользователя должно быть от 2 до 32 символов; "
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                USERNAME_LENGTH.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
@@ -362,12 +389,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .username(username)
                 .build();
         long countBefore = appUserRepository.count();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "Поле содержит запрещённые символы (emoji или XSS)"
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                FORBIDDEN_CHARS.getMsg()
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей (" + description + ")");
@@ -382,7 +409,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userIdFirst = null;
         String userIdSecond = null;
         try {
-            Response firstResponse = apiHelper.post("/auth/register", first);
+            Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
             ApiResponseAssert.assertRegisterSuccess(
                     firstResponse,
                     first.getEmail(),
@@ -390,7 +417,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     first.getRole(),
                     first.getPhone()
             );
-            userIdFirst = firstResponse.jsonPath().getString("data.id");
+            userIdFirst = firstResponse.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     first.getUsername(),
@@ -400,7 +427,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .username("user")
                     .build();
-            Response secondResponse = apiHelper.post("/auth/register", second);
+            Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
             ApiResponseAssert.assertRegisterSuccess(
                     secondResponse,
                     second.getEmail(),
@@ -408,7 +435,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     second.getRole(),
                     second.getPhone()
             );
-            userIdSecond = secondResponse.jsonPath().getString("data.id");
+            userIdSecond = secondResponse.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     second.getUsername(),
@@ -434,14 +461,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .password(password)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "password: Пароль должен быть от 6 до 64 символов, только " +
-                        "латинские буквы, минимум одна заглавная буква, один спецсимвол и одна цифра; "
-        );
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMPTY_PASSWORD.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -458,14 +483,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         request.put("role", "USER");
         request.put("phone", phone);
         request.put("email", email);
-        Response response = apiHelper.post("/auth/register", request);
-        ApiResponseAssert.assertError(
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
+        ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "password: Пароль должен быть от 6 до 64 символов, только " +
-                        "латинские буквы, минимум одна заглавная буква, один спецсимвол и одна цифра; "
-        );
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMPTY_PASSWORD.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, username);
     }
 
@@ -482,12 +505,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 + "\"phone\": \"" + phone + "\","
                 + "\"email\": \"" + email + "\""
                 + "}";
-        Response response = apiHelper.post("/auth/register", badRequestJson);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "Некорректный или пустой JSON"
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                INVALID_OR_EMPTY_JSON.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, username);
     }
@@ -498,14 +521,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .password("A1b!2")
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "password: Пароль должен быть от 6 до 64 символов, только " +
-                        "латинские буквы, минимум одна заглавная буква, один спецсимвол и одна цифра; "
-        );
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMPTY_PASSWORD.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -517,7 +538,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -525,7 +546,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -548,7 +569,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -556,7 +577,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -577,14 +598,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .password("A1b!" + "a".repeat(61))
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "password: Пароль должен быть от 6 до 64 символов, только " +
-                        "латинские буквы, минимум одна заглавная буква, один спецсимвол и одна цифра; "
-        );
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMPTY_PASSWORD.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -595,14 +614,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .password(password)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "password: Пароль должен быть от 6 до 64 символов, только " +
-                        "латинские буквы, минимум одна заглавная буква, один спецсимвол и одна цифра"
-        );
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMPTY_PASSWORD.getMsg());
         assertTrue(response.asString().contains("password"),
                 "Ошибка должна относиться к паролю (" + caseDescription + ")");
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
@@ -615,12 +632,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .password(password)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "Поле содержит запрещённые символы (emoji или XSS)"
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                FORBIDDEN_CHARS.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
@@ -635,7 +652,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -643,7 +660,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.getEnName(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -666,7 +683,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -674,7 +691,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.getEnName(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -696,13 +713,13 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .role(role)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         assertTrue(response.asString().contains("role") || response.asString().contains("role: Роль пользователя обязательна; "),
                 "Ошибка должна относиться к роли (" + caseDescription + ")");
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
                 "role: Роль пользователя обязательна; "
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
@@ -722,12 +739,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         request.put("role", role);
         request.put("phone", phone);
         request.put("email", email);
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "Некорректный или пустой JSON"
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                INVALID_OR_EMPTY_JSON.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, username);
     }
@@ -739,12 +756,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .role(role)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "Некорректный или пустой JSON"
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                INVALID_OR_EMPTY_JSON.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
@@ -758,11 +775,11 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .phone(phone)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
                 expectedError
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
@@ -775,14 +792,14 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .phone(phone)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         assertTrue(response.asString().contains("phone"),
                 "Ошибка должна относиться к телефону (" + caseDescription + ")");
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "phone: Телефон должен состоять ровно из 11 цифр; "
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                PHONE_INVALID.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
@@ -794,11 +811,11 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .phone(phone)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
                 "Телефон должен состоять ровно из 11 цифр;"
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
@@ -814,7 +831,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -822,7 +839,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -845,7 +862,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -853,7 +870,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -876,7 +893,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -884,7 +901,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -905,12 +922,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .email("test@" + "q".repeat(248) + ".ru")
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "email: Email не должен превышать 255 символов; "
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMAIL_LENGTH.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
@@ -922,21 +939,21 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .email(email)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
 
         if (expectFull) {
             ApiResponseAssert.assertError(
                     response,
-                    400,
-                    "VALIDATION_ERROR",
-                    "email: Поле email пользователя не должно быть пустым; "
+                    ApiError.BAD_REQUEST.getStatus(),
+                    ApiError.BAD_REQUEST.getCode(),
+                    EMAIL_EMPTY.getMsg()
             );
         } else {
             ApiResponseAssert.assertErrorPartly(
                     response,
-                    400,
-                    "VALIDATION_ERROR",
-                    "email: Поле email пользователя не должно быть пустым; "
+                    ApiError.BAD_REQUEST.getStatus(),
+                    ApiError.BAD_REQUEST.getCode(),
+                    EMAIL_EMPTY.getMsg()
             );
         }
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
@@ -949,12 +966,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .email(email)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         ApiResponseAssert.assertError(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "email: Email должен быть в формате name@domain.zone; "
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMAIL_FORMAT.getMsg()
         );
         assertTrue(response.asString().contains("email"),
                 "Ошибка должна относиться к email (" + caseDescription + ")");
@@ -968,13 +985,13 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .email(email)
                 .build();
-        Response response = apiHelper.post("/auth/register", request);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
 
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "email: Email должен быть в формате name@domain.zone; "
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMAIL_FORMAT.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
@@ -987,7 +1004,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest request = userTestUtil.generateRandomUser();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -995,7 +1012,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -1018,7 +1035,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -1026,7 +1043,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -1057,7 +1074,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     email.trim(),
@@ -1065,7 +1082,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.name(),
                     phone.trim()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     username.trim(),
@@ -1097,7 +1114,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         request.put("extraField", shouldBeIgnored);
         String userId = null;
         try {
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     email,
@@ -1105,7 +1122,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.name(),
                     phone
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     username,
@@ -1131,7 +1148,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .contentType(ContentType.JSON)
                     .body(request)
                     .when()
-                    .post("/auth/register");
+                    .post(AUTH_REGISTER.getPath());
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -1139,7 +1156,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.getEnName(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -1166,7 +1183,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response firstResponse = apiHelper.post("/auth/register", first);
+            Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
             ApiResponseAssert.assertRegisterSuccess(
                     firstResponse,
                     first.getEmail(),
@@ -1174,7 +1191,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     first.getRole(),
                     first.getPhone()
             );
-            userId = firstResponse.jsonPath().getString("data.id");
+            userId = firstResponse.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     first.getUsername(),
@@ -1184,12 +1201,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .username(username)
                     .build();
-            Response secondResponse = apiHelper.post("/auth/register", second);
+            Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
             ApiResponseAssert.assertError(
                     secondResponse,
-                    400,
-                    "USER_ALREADY_EXISTS",
-                    "Пользователь с таким именем уже существует"
+                    USER_ALREADY_EXISTS.getStatus(),
+                    USER_ALREADY_EXISTS.getCode(),
+                    ErrorMessage.USER_ALREADY_EXISTS.getMsg()
             );
             DbResponseAssert.assertUserCountByField(appUserRepository, "username", username, 1);
         } finally {
@@ -1210,7 +1227,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         String userId = null;
         try {
-            Response firstResponse = apiHelper.post("/auth/register", first);
+            Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
             ApiResponseAssert.assertRegisterSuccess(
                     firstResponse,
                     first.getEmail(),
@@ -1218,7 +1235,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     first.getRole(),
                     first.getPhone()
             );
-            userId = firstResponse.jsonPath().getString("data.id");
+            userId = firstResponse.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     first.getUsername(),
@@ -1228,12 +1245,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .username(username)
                     .build();
-            Response secondResponse = apiHelper.post("/auth/register", second);
+            Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
             ApiResponseAssert.assertError(
                     secondResponse,
-                    400,
-                    "USER_ALREADY_EXISTS",
-                    "Пользователь с таким именем уже существует"
+                    USER_ALREADY_EXISTS.getStatus(),
+                    USER_ALREADY_EXISTS.getCode(),
+                    ErrorMessage.USER_ALREADY_EXISTS.getMsg()
             );
             DbResponseAssert.assertUserCountByField(appUserRepository, "username", username, 1);
         } finally {
@@ -1254,7 +1271,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userIdFirst = null;
         String userIdSecond = null;
         try {
-            Response firstResponse = apiHelper.post("/auth/register", first);
+            Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
             ApiResponseAssert.assertRegisterSuccess(
                     firstResponse,
                     first.getEmail(),
@@ -1262,7 +1279,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     first.getRole(),
                     first.getPhone()
             );
-            userIdFirst = firstResponse.jsonPath().getString("data.id");
+            userIdFirst = firstResponse.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     first.getUsername(),
@@ -1272,7 +1289,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .email(email)
                     .build();
-            Response secondResponse = apiHelper.post("/auth/register", second);
+            Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
             ApiResponseAssert.assertRegisterSuccess(
                     secondResponse,
                     second.getEmail(),
@@ -1280,7 +1297,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     second.getRole(),
                     second.getPhone()
             );
-            userIdSecond = secondResponse.jsonPath().getString("data.id");
+            userIdSecond = secondResponse.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     second.getUsername(),
@@ -1308,7 +1325,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userIdFirst = null;
         String userIdSecond = null;
         try {
-            Response firstResponse = apiHelper.post("/auth/register", first);
+            Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
             ApiResponseAssert.assertRegisterSuccess(
                     firstResponse,
                     first.getEmail(),
@@ -1316,7 +1333,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     first.getRole(),
                     first.getPhone()
             );
-            userIdFirst = firstResponse.jsonPath().getString("data.id");
+            userIdFirst = firstResponse.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     first.getUsername(),
@@ -1326,7 +1343,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .phone(phone)
                     .build();
-            Response secondResponse = apiHelper.post("/auth/register", second);
+            Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
             ApiResponseAssert.assertRegisterSuccess(
                     secondResponse,
                     second.getEmail(),
@@ -1334,7 +1351,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     second.getRole(),
                     second.getPhone()
             );
-            userIdSecond = secondResponse.jsonPath().getString("data.id");
+            userIdSecond = secondResponse.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     second.getUsername(),
@@ -1361,7 +1378,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
             RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                     .role(ADMIN.getEnName())
                     .build();
-            Response response = apiHelper.post("/auth/register", request);
+            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
             ApiResponseAssert.assertRegisterSuccess(
                     response,
                     request.getEmail(),
@@ -1369,7 +1386,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getRole(),
                     request.getPhone()
             );
-            String userId = response.jsonPath().getString("data.id");
+            String userId = response.jsonPath().getString(DATA_ID.getPath());
             createdUserIds.add(userId);
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
@@ -1382,12 +1399,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         RegisterRequest extraAdmin = userTestUtil.generateRandomUser().toBuilder()
                 .role(ADMIN.getEnName())
                 .build();
-        Response failResponse = apiHelper.post("/auth/register", extraAdmin);
+        Response failResponse = apiHelper.post(AUTH_REGISTER.getPath(), extraAdmin);
         ApiResponseAssert.assertError(
                 failResponse,
-                403,
-                "ADMIN_LIMIT_EXCEEDED",
-                "В системе не может быть более 3-х админов"
+                FORBIDDEN.getStatus(),
+                FORBIDDEN.getCode(),
+                ADMIN_LIMIT.getMsg()
         );
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, extraAdmin.getUsername());
         for (String userId : createdUserIds) {
@@ -1404,12 +1421,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     void registerWithEmptyBody() {
         String badRequestJson = "";
         long countBefore = appUserRepository.count();
-        Response response = apiHelper.post("/auth/register", badRequestJson);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "Некорректный или пустой JSON"
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                INVALID_OR_EMPTY_JSON.getMsg()
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1420,12 +1437,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     void registerWithEmptyBracketsBody() {
         String badRequestJson = "{}";
         long countBefore = appUserRepository.count();
-        Response response = apiHelper.post("/auth/register", badRequestJson);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "username: Имя пользователя не должно быть пустым; "
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                EMPTY_USERNAME.getMsg()
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1438,11 +1455,11 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         Response response = RestAssured
                 .given()
                 .contentType("application/json")
-                .post("/auth/register")
+                .post(AUTH_REGISTER.getPath())
                 .andReturn();
-        assertEquals(400, response.statusCode());
-        assertTrue(response.asString().contains("VALIDATION_ERROR"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Некорректный или пустой JSON"), "Должно быть сообщение о пустом JSON");
+        assertEquals(ApiError.BAD_REQUEST.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(ApiError.BAD_REQUEST.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(INVALID_OR_EMPTY_JSON.getMsg()), "Должно быть сообщение о пустом JSON");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1452,12 +1469,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     @DisplayName("Register: невалидный JSON (массив, число, строка, null, нет кавычек/скобки)")
     void registerWithInvalidJson(String badRequestJson, String caseDescription) {
         long countBefore = appUserRepository.count();
-        Response response = apiHelper.post("/auth/register", badRequestJson);
+        Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
         ApiResponseAssert.assertErrorPartly(
                 response,
-                400,
-                "VALIDATION_ERROR",
-                "Некорректный или пустой JSON"
+                ApiError.BAD_REQUEST.getStatus(),
+                ApiError.BAD_REQUEST.getCode(),
+                INVALID_OR_EMPTY_JSON.getMsg()
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1473,10 +1490,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         Response response = given()
                 .body(request)
                 .when()
-                .post("/auth/register");
-        assertEquals(415, response.statusCode());
-        assertTrue(response.asString().contains("UNSUPPORTED_MEDIA_TYPE"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Неподдерживаемый Content-Type"),
+                .post(AUTH_REGISTER.getPath());
+        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
                 "Должно быть сообщение о неподдерживаемом Content-Type");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1490,10 +1507,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType("text/plain")
                 .body("{\"request\"}")
                 .when()
-                .post("/auth/register");
-        assertEquals(415, response.statusCode());
-        assertTrue(response.asString().contains("UNSUPPORTED_MEDIA_TYPE"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Неподдерживаемый Content-Type"),
+                .post(AUTH_REGISTER.getPath());
+        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
                 "Должно быть сообщение о неподдерживаемом Content-Type");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1507,10 +1524,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType("text/javascript")
                 .body("var x = 1;")
                 .when()
-                .post("/auth/register");
-        assertEquals(415, response.statusCode());
-        assertTrue(response.asString().contains("UNSUPPORTED_MEDIA_TYPE"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Неподдерживаемый Content-Type"),
+                .post(AUTH_REGISTER.getPath());
+        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
                 "Должно быть сообщение о неподдерживаемом Content-Type");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1524,10 +1541,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType("text/xml")
                 .body("<user><username>xml</username></user>")
                 .when()
-                .post("/auth/register");
-        assertEquals(415, response.statusCode());
-        assertTrue(response.asString().contains("UNSUPPORTED_MEDIA_TYPE"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Неподдерживаемый Content-Type"),
+                .post(AUTH_REGISTER.getPath());
+        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
                 "Должно быть сообщение о неподдерживаемом Content-Type");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1541,10 +1558,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType("text/html")
                 .body("<div>hello</div>")
                 .when()
-                .post("/auth/register");
-        assertEquals(415, response.statusCode());
-        assertTrue(response.asString().contains("UNSUPPORTED_MEDIA_TYPE"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Неподдерживаемый Content-Type"),
+                .post(AUTH_REGISTER.getPath());
+        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
                 "Должно быть сообщение о неподдерживаемом Content-Type");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1557,10 +1574,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         Response response = given()
                 .multiPart("file", "filename.txt", "some text".getBytes())
                 .when()
-                .post("/auth/register");
-        assertEquals(415, response.statusCode());
-        assertTrue(response.asString().contains("UNSUPPORTED_MEDIA_TYPE"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Неподдерживаемый Content-Type"),
+                .post(AUTH_REGISTER.getPath());
+        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
                 "Должно быть сообщение о неподдерживаемом Content-Type");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1578,10 +1595,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .formParam("phone", "79990000001")
                 .formParam("email", "user@mail.ru")
                 .when()
-                .post("/auth/register");
-        assertEquals(415, response.statusCode());
-        assertTrue(response.asString().contains("UNSUPPORTED_MEDIA_TYPE"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Неподдерживаемый Content-Type"),
+                .post(AUTH_REGISTER.getPath());
+        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
                 "Должно быть сообщение о неподдерживаемом Content-Type");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1602,10 +1619,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType("text/plain")
                 .body(request)
                 .when()
-                .post("/auth/register");
-        assertEquals(415, response.statusCode());
-        assertTrue(response.asString().contains("UNSUPPORTED_MEDIA_TYPE"), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains("Неподдерживаемый Content-Type"),
+                .post(AUTH_REGISTER.getPath());
+        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
+        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
+        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
                 "Должно быть сообщение о неподдерживаемом Content-Type");
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1616,18 +1633,19 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     @Test
     @DisplayName("Register: GET вместо POST")
     void registerGetInsteadOfPost() {
+        String get = "GET";
         RegisterRequest request = userTestUtil.generateRandomUser();
         long countBefore = appUserRepository.count();
         Response response = given()
                 .contentType(ContentType.JSON)
                 .body(request)
                 .when()
-                .get("/auth/register");
+                .get(AUTH_REGISTER.getPath());
         ApiResponseAssert.assertError(
                 response,
-                405,
-                "METHOD_NOT_ALLOWED",
-                "Метод GET не поддерживается для этого ресурса"
+                METHOD_NOT_ALLOWED.getStatus(),
+                METHOD_NOT_ALLOWED.getCode(),
+                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), get)
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1636,18 +1654,19 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     @Test
     @DisplayName("Register: PUT вместо POST")
     void registerPutInsteadOfPost() {
+        String put = "PUT";
         RegisterRequest request = userTestUtil.generateRandomUser();
         long countBefore = appUserRepository.count();
         Response response = given()
                 .contentType(ContentType.JSON)
                 .body(request)
                 .when()
-                .put("/auth/register");
+                .put(AUTH_REGISTER.getPath());
         ApiResponseAssert.assertError(
                 response,
-                405,
-                "METHOD_NOT_ALLOWED",
-                "Метод PUT не поддерживается для этого ресурса"
+                METHOD_NOT_ALLOWED.getStatus(),
+                METHOD_NOT_ALLOWED.getCode(),
+                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), put)
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1656,18 +1675,19 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     @Test
     @DisplayName("Register: DELETE вместо POST")
     void registerDeleteInsteadOfPost() {
+        String delete = "DELETE";
         RegisterRequest request = userTestUtil.generateRandomUser();
         long countBefore = appUserRepository.count();
         Response response = given()
                 .contentType(ContentType.JSON)
                 .body(request)
                 .when()
-                .delete("/auth/register");
+                .delete(AUTH_REGISTER.getPath());
         ApiResponseAssert.assertError(
                 response,
-                405,
-                "METHOD_NOT_ALLOWED",
-                "Метод DELETE не поддерживается для этого ресурса"
+                METHOD_NOT_ALLOWED.getStatus(),
+                METHOD_NOT_ALLOWED.getCode(),
+                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), delete)
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1682,12 +1702,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(request)
                 .when()
-                .post("/auth/register-not-exist");
+                .post(AUTH_REGISTER_NOT_EXIST.getPath());
         ApiResponseAssert.assertError(
                 response,
-                404,
-                "NOT_FOUND",
-                "Эндпоинт не найден"
+                NOT_FOUND.getStatus(),
+                NOT_FOUND.getCode(),
+                ENDPOINT_NOT_FOUND.getMsg()
         );
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
@@ -1705,10 +1725,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .contentType(ContentType.JSON)
                     .body(request)
                     .when()
-                    .post("/auth/register")
+                    .post(AUTH_REGISTER.getPath())
                     .then()
-                    .statusCode(200)
-                    .header("Set-Cookie", nullValue())
+                    .statusCode(OK.getStatus())
+                    .header(ApiHeader.SET_COOKIE.getTitle(), nullValue())
                     .extract().response();
             ApiResponseAssert.assertRegisterSuccess(
                     response,
@@ -1717,7 +1737,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.getEnName(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -1743,11 +1763,11 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .contentType(ContentType.JSON)
                     .body(request)
                     .when()
-                    .post("/auth/register")
+                    .post(AUTH_REGISTER.getPath())
                     .then()
-                    .statusCode(200)
-                    .header("Cache-Control", containsString("no-store"))
-                    .header("Pragma", containsString("no-cache"))
+                    .statusCode(OK.getStatus())
+                    .header(ApiHeader.CACHE_CONTROL.getTitle(), notNullValue())
+                    .header(ApiHeader.PRAGMA.getTitle(), notNullValue())
                     .extract().response();
             ApiResponseAssert.assertRegisterSuccess(
                     response,
@@ -1756,7 +1776,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.getEnName(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -1782,10 +1802,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .contentType(ContentType.JSON)
                     .body(request)
                     .when()
-                    .post("/auth/register")
+                    .post(AUTH_REGISTER.getPath())
                     .then()
                     .time(lessThan(2000L))
-                    .statusCode(200)
+                    .statusCode(OK.getStatus())
                     .extract().response();
             ApiResponseAssert.assertRegisterSuccess(
                     response,
@@ -1794,7 +1814,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     USER.getEnName(),
                     request.getPhone()
             );
-            userId = response.jsonPath().getString("data.id");
+            userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
                     request.getUsername(),
@@ -1819,10 +1839,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(badRequestJson)
                 .when()
-                .post("/auth/register")
+                .post(AUTH_REGISTER.getPath())
                 .then()
                 .time(lessThan(2000L))
-                .statusCode(400);
+                .statusCode(ApiError.BAD_REQUEST.getStatus());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1836,10 +1856,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType("text/plain")
                 .body(badRequestJson)
                 .when()
-                .post("/auth/register")
+                .post(AUTH_REGISTER.getPath())
                 .then()
                 .time(lessThan(2000L))
-                .statusCode(415);
+                .statusCode(UNSUPPORTED_MEDIA_TYPE.getStatus());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1856,7 +1876,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .post("/auth/not_found_endpoint")
                 .then()
                 .time(lessThan(2000L))
-                .statusCode(404);
+                .statusCode(NOT_FOUND.getStatus());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1870,10 +1890,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(badRequestJson)
                 .when()
-                .get("/auth/register")
+                .get(AUTH_REGISTER.getPath())
                 .then()
                 .time(lessThan(2000L))
-                .statusCode(405);
+                .statusCode(METHOD_NOT_ALLOWED.getStatus());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1885,7 +1905,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         try {
             for (int i = 1; i <= 7; i++) {
                 RegisterRequest request = userTestUtil.generateRandomUser();
-                Response response = apiHelper.post("/auth/register", request);
+                Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
                 ApiResponseAssert.assertRegisterSuccess(
                         response,
                         request.getEmail(),
@@ -1893,7 +1913,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                         request.getRole(),
                         request.getPhone()
                 );
-                String userId = response.jsonPath().getString("data.id");
+                String userId = response.jsonPath().getString(DATA_ID.getPath());
                 createdUserIds.add(userId);
                 DbResponseAssert.assertUserCorrectInDb(
                         appUserRepository,
@@ -1920,12 +1940,12 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .header("Origin", origin)
                 .header("Access-Control-Request-Method", method)
                 .when()
-                .options("/auth/register")
+                .options(AUTH_REGISTER.getPath())
                 .then()
-                .statusCode(200)
-                .header("Access-Control-Allow-Origin", equalTo(origin))
-                .header("Access-Control-Allow-Methods", equalTo(method))
-                .header("Access-Control-Allow-Credentials", "true");
+                .statusCode(OK.getStatus())
+                .header(ApiHeader.ACCESS_CONTROL_ALLOW_ORIGIN.getTitle(), equalTo(origin))
+                .header(ApiHeader.ACCESS_CONTROL_ALLOW_METHODS.getTitle(), equalTo(method))
+                .header(ApiHeader.ACCESS_CONTROL_ALLOW_CREDENTIALS.getTitle(), "true");
     }
 }
 

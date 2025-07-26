@@ -1,7 +1,7 @@
 package bookShop.apiTests.common;
 
-import bookShop.apiTests.auth.util.ApiHelper;
-import bookShop.apiTests.auth.util.UserTestUtil ;
+import bookShop.apiTests.util.ApiHelper;
+import bookShop.apiTests.util.UserTestUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;

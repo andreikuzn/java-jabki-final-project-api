@@ -1,8 +1,8 @@
-package bookShop.apiTests.auth.util;
+package bookShop.apiTests.util;
 
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
-import bookShop.apiTests.auth.model.AuthRequest;
+import bookShop.apiTests.model.AuthRequest;
 
 public class ApiHelper {
 

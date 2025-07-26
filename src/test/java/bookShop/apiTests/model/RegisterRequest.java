@@ -1,4 +1,4 @@
-package bookShop.apiTests.auth.model;
+package bookShop.apiTests.model;
 
 import lombok.Data;
 import lombok.Builder;

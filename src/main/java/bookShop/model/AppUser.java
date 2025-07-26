@@ -17,7 +17,7 @@ public class AppUser {
     private Long id;
     @Column(unique = true, nullable = false, length = 32)
     private String username;
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 64)
     private String password;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
