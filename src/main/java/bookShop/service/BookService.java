@@ -44,7 +44,6 @@ public class BookService {
 
     public Book addBook(BookRequest request) {
         log.info("Добавление книги: [{}] [{}]", request.getTitle(), request.getAuthor());
-        request.trimFields();
         validateBookUnique(request.getTitle(), request.getAuthor());
         Book book = Book.builder()
                 .title(request.getTitle())
@@ -58,7 +57,6 @@ public class BookService {
 
     public Book updateBook(Long id, BookRequest request) {
         log.info("Обновление книги [{}]", id);
-        request.trimFields();
         Book book = bookRepository.findById(id)
                 .orElseThrow(BookNotFoundException::new);
         validateUpdateNotChangeMainFields(book, request);

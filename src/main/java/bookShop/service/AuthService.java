@@ -1,6 +1,6 @@
 package bookShop.service;
 
-import bookShop.model.RegisterRequest;
+import bookShop.model.request.RegisterRequest;
 import bookShop.model.AppUser;
 import bookShop.model.Role;
 import bookShop.repository.AppUserRepository;
@@ -33,7 +33,6 @@ public class AuthService {
 
     public UserResponse register(RegisterRequest request) {
         log.info("Регистрация пользователя: {}", request.getUsername());
-        request.trimFields();
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
         }
@@ -62,7 +61,6 @@ public class AuthService {
     }
 
     public AuthResponse login(AuthRequest request) {
-        request.trimFields();
         log.info("Попытка входа пользователя: {}", request.getUsername());
         AppUser user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));

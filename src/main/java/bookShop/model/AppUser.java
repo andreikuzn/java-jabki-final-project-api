@@ -22,9 +22,11 @@ public class AppUser {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+    @Builder.Default
     private int loyaltyPoints = 0;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private LoyaltyLevel loyaltyLevel = LoyaltyLevel.NOVICE;
     @OneToMany(mappedBy = "appUser", fetch = FetchType.EAGER)
     private List<Loan> loans;

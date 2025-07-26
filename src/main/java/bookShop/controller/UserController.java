@@ -1,6 +1,6 @@
 package bookShop.controller;
 
-import bookShop.model.RegisterRequest;
+import bookShop.model.request.RegisterRequest;
 import bookShop.model.AppUserDetails;
 import bookShop.util.ApiResponse;
 import bookShop.service.UserService;

@@ -6,7 +6,9 @@ import lombok.AllArgsConstructor;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import bookShop.validation.NoEmojiNoXss;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+@JsonDeserialize(using = TrimmingAuthRequestDeserializer.class)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,9 +21,4 @@ public class AuthRequest {
     @Size(min = 6, max = 64, message = "Пароль должен быть от 6 до 64 символов")
     @NoEmojiNoXss
     private String password;
-
-    public void trimFields() {
-        if (username != null) username = username.trim();
-        if (password != null) password = password.trim();
-    }
 }

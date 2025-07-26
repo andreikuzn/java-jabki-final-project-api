@@ -1,7 +1,15 @@
 package bookShop.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
 public enum Role {
-    USER,
-    ADMIN
+    USER("Пользователь", "USER"),
+    ADMIN("Администратор", "ADMIN");
+
+    private final String ruName;
+    private final String enName;
 }
 
