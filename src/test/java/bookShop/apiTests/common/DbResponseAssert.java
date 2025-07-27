@@ -4,6 +4,7 @@ import bookShop.model.AppUser;
 import bookShop.model.Role;
 import bookShop.repository.AppUserRepository;
 import java.util.List;
+import bookShop.apiTests.model.RegisterRequest;
 
 import static bookShop.model.LoyaltyLevel.NOVICE;
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,7 +24,20 @@ public class DbResponseAssert {
         assertEquals(expectedRole, dbUser.getRole());
         assertEquals(0, dbUser.getLoyaltyPoints());
         assertEquals(NOVICE.getTitle(), dbUser.getLoyaltyLevel().getTitle());
-        assertNotNull(dbUser.getId());
+        assertNotNull(dbUser.getId(), "ID должен быть сохранён в БД");
+        assertNotNull(dbUser.getPassword(), "Пароль должен быть сохранён в БД");
+    }
+
+    public static void assertUserCorrectInDb(AppUserRepository repo, RegisterRequest expected) {
+        AppUser dbUser = repo.findByUsername(expected.getUsername()).orElse(null);
+        assertNotNull(dbUser, "Пользователь не найден в БД");
+        assertEquals(expected.getUsername(), dbUser.getUsername());
+        assertEquals(expected.getEmail(), dbUser.getEmail());
+        assertEquals(expected.getPhone(), dbUser.getPhone());
+        assertEquals(expected.getRole(), dbUser.getRole().getEnName());
+        assertEquals(0, dbUser.getLoyaltyPoints());
+        assertEquals(NOVICE.getTitle(), dbUser.getLoyaltyLevel().getTitle());
+        assertNotNull(dbUser.getId(), "ID должен быть сохранён в БД");
         assertNotNull(dbUser.getPassword(), "Пароль должен быть сохранён в БД");
     }
 

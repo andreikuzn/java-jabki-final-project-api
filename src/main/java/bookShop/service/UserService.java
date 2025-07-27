@@ -13,6 +13,7 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.List;
 import java.util.stream.Collectors;
+import bookShop.model.request.RegisterRequest;
 
 @Slf4j
 @Service
@@ -66,7 +67,7 @@ public class UserService {
         log.info("Пользователь [{}] удалён админом", id);
     }
 
-    public UserResponse updateUser(Long id, bookShop.model.request.RegisterRequest request, AppUserDetails userDetails) {
+    public UserResponse updateUser(Long id, RegisterRequest request, AppUserDetails userDetails) {
         log.info("Пользователь [{}] инициировал обновление пользователя [{}]", userDetails.getUsername(), id);
         AppUser user = findUserByIdOrThrow(id);
         checkUpdateUserRights(user, userDetails, request);
@@ -76,7 +77,7 @@ public class UserService {
         return toUserResponseWithActiveLoans(saved);
     }
 
-    public UserResponse createUser(bookShop.model.request.RegisterRequest request) {
+    public UserResponse createUser(RegisterRequest request) {
         log.info("Попытка создать пользователя: username={}", request.getUsername());
         if (userRepository.existsByUsernameIgnoreCase(request.getUsername())) {
             throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
@@ -114,7 +115,7 @@ public class UserService {
         return response;
     }
 
-    private void checkUpdateUserRights(AppUser user, AppUserDetails userDetails, bookShop.model.request.RegisterRequest request) {
+    private void checkUpdateUserRights(AppUser user, AppUserDetails userDetails, RegisterRequest request) {
         boolean isAdmin = userDetails.getRole() == Role.ADMIN;
         boolean isOwner = user.getId().equals(userDetails.getId());
         if (!isAdmin && !isOwner) {
@@ -130,7 +131,7 @@ public class UserService {
         }
     }
 
-    private void updateUserFields(AppUser user, bookShop.model.request.RegisterRequest request, AppUserDetails userDetails) {
+    private void updateUserFields(AppUser user, RegisterRequest request, AppUserDetails userDetails) {
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             var violations = validator.validateProperty(request, "password");
             if (!violations.isEmpty()) {

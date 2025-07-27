@@ -22,11 +22,7 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import bookShop.apiTests.enums.ApiError;
 import bookShop.apiTests.enums.ErrorMessage;
-import bookShop.apiTests.enums.ApiError;
 import bookShop.apiTests.enums.ApiHeader;
-import bookShop.apiTests.enums.ApiPath;
-import bookShop.apiTests.enums.ErrorMessage;
-import bookShop.apiTests.enums.JsonPathKey;
 
 import static bookShop.apiTests.enums.ApiError.FORBIDDEN;
 import static bookShop.apiTests.enums.ApiError.METHOD_NOT_ALLOWED;
@@ -40,8 +36,9 @@ import static bookShop.apiTests.enums.ErrorMessage.ADMIN_LIMIT;
 import static bookShop.apiTests.enums.ErrorMessage.EMAIL_EMPTY;
 import static bookShop.apiTests.enums.ErrorMessage.EMAIL_FORMAT;
 import static bookShop.apiTests.enums.ErrorMessage.EMAIL_LENGTH;
-import static bookShop.apiTests.enums.ErrorMessage.EMPTY_PASSWORD;
-import static bookShop.apiTests.enums.ErrorMessage.EMPTY_USERNAME;
+import static bookShop.apiTests.enums.ErrorMessage.PASSWORD_LENGTH;
+import static bookShop.apiTests.enums.ErrorMessage.ROLE_EMPTY;
+import static bookShop.apiTests.enums.ErrorMessage.USERNAME_EMPTY;
 import static bookShop.apiTests.enums.ErrorMessage.ENDPOINT_NOT_FOUND;
 import static bookShop.apiTests.enums.ErrorMessage.FORBIDDEN_CHARS;
 import static bookShop.apiTests.enums.ErrorMessage.INVALID_OR_EMPTY_JSON;
@@ -206,21 +203,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .username(username)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        if (username == null) {
-            ApiResponseAssert.assertError(
-                    response,
-                    ApiError.BAD_REQUEST.getStatus(),
-                    ApiError.BAD_REQUEST.getCode(),
-                    EMPTY_USERNAME.getMsg()
-            );
-        } else {
-            ApiResponseAssert.assertErrorPartly(
-                    response,
-                    ApiError.BAD_REQUEST.getStatus(),
-                    ApiError.BAD_REQUEST.getCode(),
-                    EMPTY_USERNAME.getMsg()
-            );
-        }
+        ApiResponseAssert.assertBadRequest(response, USERNAME_EMPTY.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -277,12 +260,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 + "}";
         long countBefore = appUserRepository.count();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                INVALID_OR_EMPTY_JSON.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, INVALID_OR_EMPTY_JSON.getMsg());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -294,12 +272,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .username("a")
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                USERNAME_LENGTH.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, USERNAME_LENGTH.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -312,20 +285,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -343,20 +305,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -372,12 +323,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .username("b".repeat(33))
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                USERNAME_LENGTH.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, USERNAME_LENGTH.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -390,12 +336,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .build();
         long countBefore = appUserRepository.count();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                FORBIDDEN_CHARS.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, FORBIDDEN_CHARS.getMsg());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей (" + description + ")");
     }
@@ -410,38 +351,16 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userIdSecond = null;
         try {
             Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
-            ApiResponseAssert.assertRegisterSuccess(
-                    firstResponse,
-                    first.getEmail(),
-                    first.getUsername(),
-                    first.getRole(),
-                    first.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(firstResponse, first);
             userIdFirst = firstResponse.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    first.getUsername(),
-                    first.getEmail(),
-                    first.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, first);
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .username("user")
                     .build();
             Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
-            ApiResponseAssert.assertRegisterSuccess(
-                    secondResponse,
-                    second.getEmail(),
-                    second.getUsername(),
-                    second.getRole(),
-                    second.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(secondResponse, second);
             userIdSecond = secondResponse.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    second.getUsername(),
-                    second.getEmail(),
-                    second.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, second);
         } finally {
             if (userIdFirst != null || userIdSecond != null) {
                 userTestUtil.deleteUser(userIdFirst);
@@ -462,11 +381,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .password(password)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_PASSWORD.getMsg());
+        ApiResponseAssert.assertBadRequest(response, PASSWORD_LENGTH.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -484,11 +399,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         request.put("phone", phone);
         request.put("email", email);
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_PASSWORD.getMsg());
+        ApiResponseAssert.assertBadRequest(response, PASSWORD_LENGTH.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, username);
     }
 
@@ -506,12 +417,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 + "\"email\": \"" + email + "\""
                 + "}";
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                INVALID_OR_EMPTY_JSON.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, INVALID_OR_EMPTY_JSON.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, username);
     }
 
@@ -522,11 +428,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .password("A1b!2")
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_PASSWORD.getMsg());
+        ApiResponseAssert.assertBadRequest(response, PASSWORD_LENGTH.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -539,20 +441,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -570,20 +461,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -599,11 +479,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .password("A1b!" + "a".repeat(61))
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_PASSWORD.getMsg());
+        ApiResponseAssert.assertBadRequest(response, PASSWORD_LENGTH.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -615,11 +491,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .password(password)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_PASSWORD.getMsg());
+        ApiResponseAssert.assertBadRequest(response, PASSWORD_LENGTH.getMsg());
         assertTrue(response.asString().contains("password"),
                 "Ошибка должна относиться к паролю (" + caseDescription + ")");
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
@@ -633,12 +505,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .password(password)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                FORBIDDEN_CHARS.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, FORBIDDEN_CHARS.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -658,8 +525,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getEmail(),
                     request.getUsername(),
                     USER.getEnName(),
-                    request.getPhone()
-            );
+                    request.getPhone());
             userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
@@ -689,8 +555,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     request.getEmail(),
                     request.getUsername(),
                     USER.getEnName(),
-                    request.getPhone()
-            );
+                    request.getPhone());
             userId = response.jsonPath().getString(DATA_ID.getPath());
             DbResponseAssert.assertUserCorrectInDb(
                     appUserRepository,
@@ -714,14 +579,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .role(role)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        assertTrue(response.asString().contains("role") || response.asString().contains("role: Роль пользователя обязательна; "),
+        assertTrue(response.asString().contains("role") || response.asString().contains(ROLE_EMPTY.getMsg()),
                 "Ошибка должна относиться к роли (" + caseDescription + ")");
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                "role: Роль пользователя обязательна; "
-        );
+        ApiResponseAssert.assertBadRequest(response, ROLE_EMPTY.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -757,12 +617,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .role(role)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                INVALID_OR_EMPTY_JSON.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, INVALID_OR_EMPTY_JSON.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -776,12 +631,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .phone(phone)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                expectedError
-        );
+        ApiResponseAssert.assertBadRequest(response, PHONE_EMPTY.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -795,12 +645,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
         assertTrue(response.asString().contains("phone"),
                 "Ошибка должна относиться к телефону (" + caseDescription + ")");
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                PHONE_INVALID.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, PHONE_INVALID.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -812,12 +657,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .phone(phone)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                "Телефон должен состоять ровно из 11 цифр;"
-        );
+        ApiResponseAssert.assertBadRequest(response, PHONE_INVALID.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -832,20 +672,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -863,20 +692,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -894,20 +712,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -923,39 +730,19 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .email("test@" + "q".repeat(248) + ".ru")
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMAIL_LENGTH.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, EMAIL_LENGTH.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
     @ParameterizedTest(name = "[{index}] email=\"{0}\" — {1}")
     @MethodSource("invalidEmailEmptyCases")
     @DisplayName("Register: email = null/пусто/пробел")
-    void registerWithEmptyOrNullEmail(String email, String caseDescription, boolean expectFull) {
+    void registerWithEmptyOrNullEmail(String email) {
         RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
                 .email(email)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-
-        if (expectFull) {
-            ApiResponseAssert.assertError(
-                    response,
-                    ApiError.BAD_REQUEST.getStatus(),
-                    ApiError.BAD_REQUEST.getCode(),
-                    EMAIL_EMPTY.getMsg()
-            );
-        } else {
-            ApiResponseAssert.assertErrorPartly(
-                    response,
-                    ApiError.BAD_REQUEST.getStatus(),
-                    ApiError.BAD_REQUEST.getCode(),
-                    EMAIL_EMPTY.getMsg()
-            );
-        }
+        ApiResponseAssert.assertBadRequest(response, EMAIL_EMPTY.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -967,12 +754,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .email(email)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-        ApiResponseAssert.assertError(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMAIL_FORMAT.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, EMAIL_FORMAT.getMsg());
         assertTrue(response.asString().contains("email"),
                 "Ошибка должна относиться к email (" + caseDescription + ")");
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
@@ -986,13 +768,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .email(email)
                 .build();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMAIL_FORMAT.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, EMAIL_FORMAT.getMsg());
         DbResponseAssert.assertUserNotExistsInDb(appUserRepository, request.getUsername());
     }
 
@@ -1005,20 +781,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -1036,20 +801,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    ADMIN);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -1149,21 +903,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .body(request)
                     .when()
                     .post(AUTH_REGISTER.getPath());
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    USER.getEnName(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER
-            );
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -1184,30 +926,14 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
-            ApiResponseAssert.assertRegisterSuccess(
-                    firstResponse,
-                    first.getEmail(),
-                    first.getUsername(),
-                    first.getRole(),
-                    first.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(firstResponse, first);
             userId = firstResponse.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    first.getUsername(),
-                    first.getEmail(),
-                    first.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, first);
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .username(username)
                     .build();
             Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
-            ApiResponseAssert.assertError(
-                    secondResponse,
-                    USER_ALREADY_EXISTS.getStatus(),
-                    USER_ALREADY_EXISTS.getCode(),
-                    ErrorMessage.USER_ALREADY_EXISTS.getMsg()
-            );
+            ApiResponseAssert.assertUserAlreadyExists(secondResponse);
             DbResponseAssert.assertUserCountByField(appUserRepository, "username", username, 1);
         } finally {
             if (userId != null) {
@@ -1228,30 +954,14 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
-            ApiResponseAssert.assertRegisterSuccess(
-                    firstResponse,
-                    first.getEmail(),
-                    first.getUsername(),
-                    first.getRole(),
-                    first.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(firstResponse, first);
             userId = firstResponse.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    first.getUsername(),
-                    first.getEmail(),
-                    first.getPhone(),
-                    ADMIN);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, first);
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .username(username)
                     .build();
             Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
-            ApiResponseAssert.assertError(
-                    secondResponse,
-                    USER_ALREADY_EXISTS.getStatus(),
-                    USER_ALREADY_EXISTS.getCode(),
-                    ErrorMessage.USER_ALREADY_EXISTS.getMsg()
-            );
+            ApiResponseAssert.assertUserAlreadyExists(secondResponse);
             DbResponseAssert.assertUserCountByField(appUserRepository, "username", username, 1);
         } finally {
             if (userId != null) {
@@ -1272,38 +982,16 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userIdSecond = null;
         try {
             Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
-            ApiResponseAssert.assertRegisterSuccess(
-                    firstResponse,
-                    first.getEmail(),
-                    first.getUsername(),
-                    first.getRole(),
-                    first.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(firstResponse, first);
             userIdFirst = firstResponse.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    first.getUsername(),
-                    first.getEmail(),
-                    first.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, first);
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .email(email)
                     .build();
             Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
-            ApiResponseAssert.assertRegisterSuccess(
-                    secondResponse,
-                    second.getEmail(),
-                    second.getUsername(),
-                    second.getRole(),
-                    second.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(secondResponse, second);
             userIdSecond = secondResponse.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    second.getUsername(),
-                    second.getEmail(),
-                    second.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, second);
             DbResponseAssert.assertUserCountByField(appUserRepository, "email", email, 2);
         } finally {
             if (userIdFirst != null || userIdSecond != null) {
@@ -1326,38 +1014,16 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String userIdSecond = null;
         try {
             Response firstResponse = apiHelper.post(AUTH_REGISTER.getPath(), first);
-            ApiResponseAssert.assertRegisterSuccess(
-                    firstResponse,
-                    first.getEmail(),
-                    first.getUsername(),
-                    first.getRole(),
-                    first.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(firstResponse, first);
             userIdFirst = firstResponse.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    first.getUsername(),
-                    first.getEmail(),
-                    first.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, first);
             RegisterRequest second = userTestUtil.generateRandomUser().toBuilder()
                     .phone(phone)
                     .build();
             Response secondResponse = apiHelper.post(AUTH_REGISTER.getPath(), second);
-            ApiResponseAssert.assertRegisterSuccess(
-                    secondResponse,
-                    second.getEmail(),
-                    second.getUsername(),
-                    second.getRole(),
-                    second.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(secondResponse, second);
             userIdSecond = secondResponse.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    second.getUsername(),
-                    second.getEmail(),
-                    second.getPhone(),
-                    USER);
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, second);
             DbResponseAssert.assertUserCountByField(appUserRepository, "phone", phone, 2);
         } finally {
             if (userIdFirst != null || userIdSecond != null) {
@@ -1374,44 +1040,34 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     void shouldNotAllowMoreThanThreeAdmins() {
         int adminsBefore = appUserRepository.countByRole(ADMIN);
         int canCreate = 3 - adminsBefore;
-        for (int i = 0; i < canCreate; i++) {
-            RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
+        try {
+            for (int i = 0; i < canCreate; i++) {
+                RegisterRequest request = userTestUtil.generateRandomUser().toBuilder()
+                        .role(ADMIN.getEnName())
+                        .build();
+                Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
+                ApiResponseAssert.assertRegisterSuccess(response, request);
+                String userId = response.jsonPath().getString(DATA_ID.getPath());
+                createdUserIds.add(userId);
+                DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
+            }
+            RegisterRequest extraAdmin = userTestUtil.generateRandomUser().toBuilder()
                     .role(ADMIN.getEnName())
                     .build();
-            Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    request.getRole(),
-                    request.getPhone()
+            Response failResponse = apiHelper.post(AUTH_REGISTER.getPath(), extraAdmin);
+            ApiResponseAssert.assertErrorPartly(
+                    failResponse,
+                    FORBIDDEN.getStatus(),
+                    FORBIDDEN.getCode(),
+                    ADMIN_LIMIT.getMsg()
             );
-            String userId = response.jsonPath().getString(DATA_ID.getPath());
-            createdUserIds.add(userId);
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    ADMIN
-            );
+            DbResponseAssert.assertUserNotExistsInDb(appUserRepository, extraAdmin.getUsername());
+        } finally {
+            for (String userId : createdUserIds) {
+                userTestUtil.deleteUser(userId);
+                DbResponseAssert.assertUserDeletedInDb(appUserRepository, userId);
+            }
         }
-        RegisterRequest extraAdmin = userTestUtil.generateRandomUser().toBuilder()
-                .role(ADMIN.getEnName())
-                .build();
-        Response failResponse = apiHelper.post(AUTH_REGISTER.getPath(), extraAdmin);
-        ApiResponseAssert.assertError(
-                failResponse,
-                FORBIDDEN.getStatus(),
-                FORBIDDEN.getCode(),
-                ADMIN_LIMIT.getMsg()
-        );
-        DbResponseAssert.assertUserNotExistsInDb(appUserRepository, extraAdmin.getUsername());
-        for (String userId : createdUserIds) {
-            userTestUtil.deleteUser(userId);
-            DbResponseAssert.assertUserDeletedInDb(appUserRepository, userId);
-        }
-        createdUserIds.clear();
     }
 
     // ====== Структура и формат запроса ======
@@ -1422,12 +1078,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String badRequestJson = "";
         long countBefore = appUserRepository.count();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                INVALID_OR_EMPTY_JSON.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, INVALID_OR_EMPTY_JSON.getMsg());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1438,12 +1089,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
         String badRequestJson = "{}";
         long countBefore = appUserRepository.count();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_USERNAME.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, USERNAME_EMPTY.getMsg());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1470,12 +1116,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
     void registerWithInvalidJson(String badRequestJson, String caseDescription) {
         long countBefore = appUserRepository.count();
         Response response = apiHelper.post(AUTH_REGISTER.getPath(), badRequestJson);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                INVALID_OR_EMPTY_JSON.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, INVALID_OR_EMPTY_JSON.getMsg());
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1491,10 +1132,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body(request)
                 .when()
                 .post(AUTH_REGISTER.getPath());
-        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
-        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
-                "Должно быть сообщение о неподдерживаемом Content-Type");
+        ApiResponseAssert.assertUnsupportedMediaType(response);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1508,10 +1146,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body("{\"request\"}")
                 .when()
                 .post(AUTH_REGISTER.getPath());
-        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
-        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
-                "Должно быть сообщение о неподдерживаемом Content-Type");
+        ApiResponseAssert.assertUnsupportedMediaType(response);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1525,10 +1160,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body("var x = 1;")
                 .when()
                 .post(AUTH_REGISTER.getPath());
-        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
-        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
-                "Должно быть сообщение о неподдерживаемом Content-Type");
+        ApiResponseAssert.assertUnsupportedMediaType(response);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1542,10 +1174,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body("<user><username>xml</username></user>")
                 .when()
                 .post(AUTH_REGISTER.getPath());
-        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
-        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
-                "Должно быть сообщение о неподдерживаемом Content-Type");
+        ApiResponseAssert.assertUnsupportedMediaType(response);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1559,10 +1188,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body("<div>hello</div>")
                 .when()
                 .post(AUTH_REGISTER.getPath());
-        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
-        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
-                "Должно быть сообщение о неподдерживаемом Content-Type");
+        ApiResponseAssert.assertUnsupportedMediaType(response);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1575,10 +1201,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .multiPart("file", "filename.txt", "some text".getBytes())
                 .when()
                 .post(AUTH_REGISTER.getPath());
-        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
-        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
-                "Должно быть сообщение о неподдерживаемом Content-Type");
+        ApiResponseAssert.assertUnsupportedMediaType(response);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1596,10 +1219,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .formParam("email", "user@mail.ru")
                 .when()
                 .post(AUTH_REGISTER.getPath());
-        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
-        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
-                "Должно быть сообщение о неподдерживаемом Content-Type");
+        ApiResponseAssert.assertUnsupportedMediaType(response);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1620,10 +1240,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body(request)
                 .when()
                 .post(AUTH_REGISTER.getPath());
-        assertEquals(UNSUPPORTED_MEDIA_TYPE.getStatus(), response.statusCode());
-        assertTrue(response.asString().contains(UNSUPPORTED_MEDIA_TYPE.getCode()), "Должна быть ошибка валидации");
-        assertTrue(response.asString().contains(ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()),
-                "Должно быть сообщение о неподдерживаемом Content-Type");
+        ApiResponseAssert.assertUnsupportedMediaType(response);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1641,12 +1258,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body(request)
                 .when()
                 .get(AUTH_REGISTER.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                METHOD_NOT_ALLOWED.getStatus(),
-                METHOD_NOT_ALLOWED.getCode(),
-                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), get)
-        );
+        ApiResponseAssert.assertMethodNotAllowed(response, get);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1662,12 +1274,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body(request)
                 .when()
                 .put(AUTH_REGISTER.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                METHOD_NOT_ALLOWED.getStatus(),
-                METHOD_NOT_ALLOWED.getCode(),
-                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), put)
-        );
+        ApiResponseAssert.assertMethodNotAllowed(response, put);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1683,12 +1290,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .body(request)
                 .when()
                 .delete(AUTH_REGISTER.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                METHOD_NOT_ALLOWED.getStatus(),
-                METHOD_NOT_ALLOWED.getCode(),
-                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), delete)
-        );
+        ApiResponseAssert.assertMethodNotAllowed(response, delete);
         long countAfter = appUserRepository.count();
         assertEquals(countBefore, countAfter, "В БД не должно появиться новых пользователей");
     }
@@ -1730,21 +1332,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .statusCode(OK.getStatus())
                     .header(ApiHeader.SET_COOKIE.getTitle(), nullValue())
                     .extract().response();
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    USER.getEnName(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER
-            );
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -1769,21 +1359,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .header(ApiHeader.CACHE_CONTROL.getTitle(), notNullValue())
                     .header(ApiHeader.PRAGMA.getTitle(), notNullValue())
                     .extract().response();
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    USER.getEnName(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER
-            );
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -1807,21 +1385,9 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .time(lessThan(2000L))
                     .statusCode(OK.getStatus())
                     .extract().response();
-            ApiResponseAssert.assertRegisterSuccess(
-                    response,
-                    request.getEmail(),
-                    request.getUsername(),
-                    USER.getEnName(),
-                    request.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(response, request);
             userId = response.jsonPath().getString(DATA_ID.getPath());
-            DbResponseAssert.assertUserCorrectInDb(
-                    appUserRepository,
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    USER
-            );
+            DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -1906,22 +1472,10 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
             for (int i = 1; i <= 7; i++) {
                 RegisterRequest request = userTestUtil.generateRandomUser();
                 Response response = apiHelper.post(AUTH_REGISTER.getPath(), request);
-                ApiResponseAssert.assertRegisterSuccess(
-                        response,
-                        request.getEmail(),
-                        request.getUsername(),
-                        request.getRole(),
-                        request.getPhone()
-                );
+                ApiResponseAssert.assertRegisterSuccess(response, request);
                 String userId = response.jsonPath().getString(DATA_ID.getPath());
                 createdUserIds.add(userId);
-                DbResponseAssert.assertUserCorrectInDb(
-                        appUserRepository,
-                        request.getUsername(),
-                        request.getEmail(),
-                        request.getPhone(),
-                        USER
-                );
+                DbResponseAssert.assertUserCorrectInDb(appUserRepository, request);
             }
         } finally {
             for (String userId : createdUserIds) {

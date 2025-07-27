@@ -17,9 +17,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.stream.Stream;
 import bookShop.apiTests.enums.ApiError;
 import bookShop.apiTests.enums.ApiHeader;
-import bookShop.apiTests.enums.ApiPath;
-import bookShop.apiTests.enums.ErrorMessage;
-import bookShop.apiTests.enums.JsonPathKey;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,11 +28,15 @@ import static bookShop.apiTests.enums.ApiError.UNSUPPORTED_MEDIA_TYPE;
 import static bookShop.apiTests.enums.ApiPath.AUTH_LOGIN;
 import static bookShop.apiTests.enums.ApiPath.AUTH_NOT_EXIST;
 import static bookShop.apiTests.enums.ApiPath.AUTH_REGISTER;
-import static bookShop.apiTests.enums.ErrorMessage.EMPTY_PASSWORD;
-import static bookShop.apiTests.enums.ErrorMessage.EMPTY_USERNAME;
+import static bookShop.apiTests.enums.ErrorMessage.PASSWORD_EMPTY;
+import static bookShop.apiTests.enums.ErrorMessage.PASSWORD_LENGTH;
+import static bookShop.apiTests.enums.ErrorMessage.USERNAME_EMPTY;
 import static bookShop.apiTests.enums.ErrorMessage.ENDPOINT_NOT_FOUND;
+import static bookShop.apiTests.enums.ErrorMessage.FORBIDDEN_CHARS;
+import static bookShop.apiTests.enums.ErrorMessage.INVALID_CREDENTIALS;
 import static bookShop.apiTests.enums.ErrorMessage.INVALID_OR_EMPTY_JSON;
 import static bookShop.apiTests.enums.ErrorMessage.USERNAME_LENGTH;
+import static bookShop.apiTests.enums.ErrorMessage.USER_NOT_FOUND;
 import static bookShop.apiTests.enums.JsonPathKey.DATA_ID;
 import static bookShop.model.Role.ADMIN;
 import static bookShop.model.Role.USER;
@@ -100,11 +101,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .password(TestDataUtil.validPassword())
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_USERNAME.getMsg());
+        ApiResponseAssert.assertBadRequest(response, USERNAME_EMPTY.getMsg());
     }
 
     @Test
@@ -154,14 +151,9 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
     void loginWithUsername1Symbol() {
         AuthRequest request = AuthRequest.builder()
                 .username("a")
-                .password(TestDataUtil.validPassword())
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                USERNAME_LENGTH.getMsg());
+        ApiResponseAssert.assertBadRequest(response, USERNAME_LENGTH.getMsg());
     }
 
     @Test
@@ -169,18 +161,11 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
     void loginWithUsername2Symbols() {
         RegisterRequest requestReg = userTestUtil.generateRandomUser().toBuilder()
                 .username("us")
-                .password(TestDataUtil.validPassword())
                 .build();
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username(requestReg.getUsername())
@@ -201,18 +186,11 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
     void loginWithUsername32Symbols() {
         RegisterRequest requestReg = userTestUtil.generateRandomUser().toBuilder()
                 .username("b".repeat(32))
-                .password(TestDataUtil.validPassword())
                 .build();
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username(requestReg.getUsername())
@@ -233,14 +211,9 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
     void loginWithUsername33Symbols() {
         AuthRequest request = AuthRequest.builder()
                 .username("b".repeat(33))
-                .password(TestDataUtil.validPassword())
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                USERNAME_LENGTH.getMsg());
+        ApiResponseAssert.assertBadRequest(response, USERNAME_LENGTH.getMsg());
     }
 
     @ParameterizedTest(name = "Login: username = \"{0}\" (emoji/XSS/SQL)")
@@ -251,12 +224,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .password(TestDataUtil.validPassword())
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                "username: Поле содержит запрещённые символы (emoji или XSS);"
-        );
+        ApiResponseAssert.assertBadRequest(response, FORBIDDEN_CHARS.getMsg());
     }
 
     // ====== Валидация password ======
@@ -269,11 +237,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .password(password)
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                "password: Пароль не должен быть пустым;");
+        ApiResponseAssert.assertBadRequest(response, PASSWORD_EMPTY.getMsg());
     }
 
     @Test
@@ -283,7 +247,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         loginMap.put("username", TestDataUtil.randomUsername());
         loginMap.put("password", 123456789);
         Response responseAuth = apiHelper.post(AUTH_LOGIN.getPath(), loginMap);
-        ApiResponseAssert.assertAuthUserNotFound(responseAuth);
+        ApiResponseAssert.assertUserNotFound(responseAuth, USER_NOT_FOUND.getMsg());
     }
 
     @Test
@@ -294,11 +258,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .password("A1b!2")
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_PASSWORD.getMsg());
+        ApiResponseAssert.assertBadRequest(response, PASSWORD_LENGTH.getMsg());
     }
 
     @Test
@@ -311,13 +271,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username(requestReg.getUsername())
@@ -343,13 +297,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username(requestReg.getUsername())
@@ -373,11 +321,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .password("A1b!" + "a".repeat(61))
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                EMPTY_PASSWORD.getMsg());
+        ApiResponseAssert.assertBadRequest(response, PASSWORD_LENGTH.getMsg());
     }
 
     @Test
@@ -388,7 +332,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .password("Test pass1!")
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertAuthUserNotFound(response);
+        ApiResponseAssert.assertUserNotFound(response, USER_NOT_FOUND.getMsg());
     }
 
     @ParameterizedTest(name = "Login: username = {0} (emoji/XSS/SQL)")
@@ -399,11 +343,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .password(password)
                 .build();
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                "password: Поле содержит запрещённые символы (emoji или XSS);");
+        ApiResponseAssert.assertBadRequest(response, FORBIDDEN_CHARS.getMsg());
     }
 
     // ====== Позитивные сценарии ======
@@ -415,13 +355,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username(requestReg.getUsername())
@@ -446,13 +380,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username(requestReg.getUsername())
@@ -478,13 +406,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username("  trim_user  ")
@@ -512,20 +434,14 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username(requestReg.getUsername())
                     .password(requestReg.getPassword() + "Wrong")
                     .build();
             Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-            ApiResponseAssert.assertAuthInvalidCredentials(response);
+            ApiResponseAssert.assertInvalidCredentials(response, INVALID_CREDENTIALS.getMsg());
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -543,20 +459,14 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             AuthRequest request = AuthRequest.builder()
                     .username(requestReg.getUsername() + "Wrong")
                     .password(requestReg.getPassword())
                     .build();
             Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-            ApiResponseAssert.assertAuthUserNotFound(response);
+            ApiResponseAssert.assertUserNotFound(response, USER_NOT_FOUND.getMsg());
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -575,13 +485,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             userTestUtil.deleteUser(userId);
             DbResponseAssert.assertUserDeletedInDb(appUserRepository, userId);
@@ -590,7 +494,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                     .password(requestReg.getPassword())
                     .build();
             Response response = apiHelper.post(AUTH_LOGIN.getPath(), request);
-            ApiResponseAssert.assertAuthUserNotFound(response);
+            ApiResponseAssert.assertUserNotFound(response, USER_NOT_FOUND.getMsg());
         } finally {
             if (userId != null) {
                 userTestUtil.deleteUser(userId);
@@ -611,13 +515,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             Map<String, Object> request = new HashMap<>();
             request.put("username", requestReg.getUsername());
@@ -637,24 +535,14 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
     @DisplayName("Login: пустой body {}")
     void loginWithEmptyBodyObject() {
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), "{}");
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                "username: Имя пользователя не должно быть пустым;"
-        );
+        ApiResponseAssert.assertBadRequest(response, USERNAME_EMPTY.getMsg());
     }
 
     @ParameterizedTest(name = "Login: body = {0} (invalid json format)")
     @MethodSource("invalidBodies")
     void loginWithInvalidJsonBody(String body) {
         Response response = apiHelper.post(AUTH_LOGIN.getPath(), body);
-        ApiResponseAssert.assertErrorPartly(
-                response,
-                ApiError.BAD_REQUEST.getStatus(),
-                ApiError.BAD_REQUEST.getCode(),
-                INVALID_OR_EMPTY_JSON.getMsg()
-        );
+        ApiResponseAssert.assertBadRequest(response, INVALID_OR_EMPTY_JSON.getMsg());
     }
 
     // ====== Заголовки и Content-Type ======
@@ -666,12 +554,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .body(body)
                 .when()
                 .post(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                UNSUPPORTED_MEDIA_TYPE.getStatus(),
-                UNSUPPORTED_MEDIA_TYPE.getCode(),
-                ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()
-        );
+        ApiResponseAssert.assertUnsupportedMediaType(response);
     }
 
     @Test
@@ -683,12 +566,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .body(body)
                 .when()
                 .post(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                UNSUPPORTED_MEDIA_TYPE.getStatus(),
-                UNSUPPORTED_MEDIA_TYPE.getCode(),
-                ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()
-        );
+        ApiResponseAssert.assertUnsupportedMediaType(response);
     }
 
     @Test
@@ -700,12 +578,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .body(body)
                 .when()
                 .post(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                UNSUPPORTED_MEDIA_TYPE.getStatus(),
-                UNSUPPORTED_MEDIA_TYPE.getCode(),
-                ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()
-        );
+        ApiResponseAssert.assertUnsupportedMediaType(response);
     }
 
     @Test
@@ -717,12 +590,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .body(xmlBody)
                 .when()
                 .post(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                UNSUPPORTED_MEDIA_TYPE.getStatus(),
-                UNSUPPORTED_MEDIA_TYPE.getCode(),
-                ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()
-        );
+        ApiResponseAssert.assertUnsupportedMediaType(response);
     }
 
     @Test
@@ -734,12 +602,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .body(htmlBody)
                 .when()
                 .post(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                UNSUPPORTED_MEDIA_TYPE.getStatus(),
-                UNSUPPORTED_MEDIA_TYPE.getCode(),
-                ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()
-        );
+        ApiResponseAssert.assertUnsupportedMediaType(response);
     }
 
     @Test
@@ -751,12 +614,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .multiPart("password", TestDataUtil.validPassword())
                 .when()
                 .post(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                UNSUPPORTED_MEDIA_TYPE.getStatus(),
-                UNSUPPORTED_MEDIA_TYPE.getCode(),
-                ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()
-        );
+        ApiResponseAssert.assertUnsupportedMediaType(response);
     }
 
     @Test
@@ -768,12 +626,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .formParam("password", TestDataUtil.validPassword())
                 .when()
                 .post(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                UNSUPPORTED_MEDIA_TYPE.getStatus(),
-                UNSUPPORTED_MEDIA_TYPE.getCode(),
-                ErrorMessage.UNSUPPORTED_MEDIA_TYPE.getMsg()
-        );
+        ApiResponseAssert.assertUnsupportedMediaType(response);
     }
 
     @Test @DisplayName("Login: Custom headers — пользователь успешно авторизован")
@@ -785,13 +638,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             String body = "{\"username\":\"" + requestReg.getUsername() + "\",\"password\":\"" + requestReg.getPassword() + "\"}";
             Response response = given()
@@ -816,11 +663,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
     void loginWithGetMethod() {
         String get = "GET";
         Response response = given().when().get(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                METHOD_NOT_ALLOWED.getStatus(),
-                METHOD_NOT_ALLOWED.getCode(),
-                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), get));
+        ApiResponseAssert.assertMethodNotAllowed(response, get);
     }
 
     @Test
@@ -832,11 +675,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .body("{\"username\":\"user\",\"password\":\"A1b!1234\"}")
                 .when()
                 .put(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                METHOD_NOT_ALLOWED.getStatus(),
-                METHOD_NOT_ALLOWED.getCode(),
-                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), put));
+        ApiResponseAssert.assertMethodNotAllowed(response, put);
     }
 
     @Test
@@ -848,11 +687,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
                 .body("{\"username\":\"user\",\"password\":\"A1b!1234\"}")
                 .when()
                 .delete(AUTH_LOGIN.getPath());
-        ApiResponseAssert.assertError(
-                response,
-                METHOD_NOT_ALLOWED.getStatus(),
-                METHOD_NOT_ALLOWED.getCode(),
-                String.format(ErrorMessage.METHOD_NOT_ALLOWED.getMsg(), delete));
+        ApiResponseAssert.assertMethodNotAllowed(response, delete);
     }
 
     @Test
@@ -877,13 +712,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             String body = "{\"username\":\"" + requestReg.getUsername() + "\",\"password\":\"" + requestReg.getPassword() + "\"}";
             given()
@@ -911,13 +740,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             String body = "{\"username\":\"" + requestReg.getUsername() + "\",\"password\":\"" + requestReg.getPassword() + "\"}";
             given()
@@ -947,13 +770,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             String body = "{\"username\":\"" + requestReg.getUsername() + "\",\"password\":\"" + requestReg.getPassword() + "\"}";
             given()
@@ -1035,13 +852,7 @@ public class AuthLoginValidationIT extends BaseIntegrationTest {
         String userId = null;
         try {
             Response responseReg = apiHelper.post(AUTH_REGISTER.getPath(), requestReg);
-            ApiResponseAssert.assertRegisterSuccess(
-                    responseReg,
-                    requestReg.getEmail(),
-                    requestReg.getUsername(),
-                    requestReg.getRole(),
-                    requestReg.getPhone()
-            );
+            ApiResponseAssert.assertRegisterSuccess(responseReg, requestReg);
             userId = responseReg.jsonPath().getString(DATA_ID.getPath());
             for (int i = 0; i < 7; i++) {
                 AuthRequest request = AuthRequest.builder()
