@@ -1439,7 +1439,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(badRequestJson)
                 .when()
-                .post("/auth/not_found_endpoint")
+                .post(AUTH_REGISTER_NOT_EXIST.getPath())
                 .then()
                 .time(lessThan(2000L))
                 .statusCode(NOT_FOUND.getStatus());
