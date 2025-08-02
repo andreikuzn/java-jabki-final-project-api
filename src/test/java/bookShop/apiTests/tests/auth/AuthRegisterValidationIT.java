@@ -21,7 +21,6 @@ import java.util.List;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import bookShop.apiTests.enums.ApiError;
-import bookShop.apiTests.enums.ErrorMessage;
 import bookShop.apiTests.enums.ApiHeader;
 
 import static bookShop.apiTests.enums.ApiError.FORBIDDEN;
@@ -29,7 +28,6 @@ import static bookShop.apiTests.enums.ApiError.METHOD_NOT_ALLOWED;
 import static bookShop.apiTests.enums.ApiError.NOT_FOUND;
 import static bookShop.apiTests.enums.ApiError.OK;
 import static bookShop.apiTests.enums.ApiError.UNSUPPORTED_MEDIA_TYPE;
-import static bookShop.apiTests.enums.ApiError.USER_ALREADY_EXISTS;
 import static bookShop.apiTests.enums.ApiPath.AUTH_REGISTER;
 import static bookShop.apiTests.enums.ApiPath.AUTH_REGISTER_NOT_EXIST;
 import static bookShop.apiTests.enums.ErrorMessage.ADMIN_LIMIT;
@@ -1055,12 +1053,7 @@ public class AuthRegisterValidationIT extends BaseIntegrationTest {
                     .role(ADMIN.getEnName())
                     .build();
             Response failResponse = apiHelper.post(AUTH_REGISTER.getPath(), extraAdmin);
-            ApiResponseAssert.assertErrorPartly(
-                    failResponse,
-                    FORBIDDEN.getStatus(),
-                    FORBIDDEN.getCode(),
-                    ADMIN_LIMIT.getMsg()
-            );
+            ApiResponseAssert.assertForbidden(failResponse, ADMIN_LIMIT.getMsg(), FORBIDDEN.getCode());
             DbResponseAssert.assertUserNotExistsInDb(appUserRepository, extraAdmin.getUsername());
         } finally {
             for (String userId : createdUserIds) {

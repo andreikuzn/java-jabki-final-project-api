@@ -203,4 +203,18 @@ public class ApiResponseAssert {
             fail("Ошибка парсинга или проверки: " + e.getMessage());
         }
     }
+
+    public static void assertForbidden(Response resp, String message, String error) {
+        assertEquals(ApiError.FORBIDDEN.getStatus(), resp.getStatusCode());
+        try {
+            ApiResponse<?> apiResp = objectMapper.readValue(resp.asString(), ApiResponse.class);
+            assertEquals(error, apiResp.getError());
+            assertTrue(apiResp.getMessage().contains(message), "Сообщение не должно быть пустым");
+            assertEquals(ApiError.FORBIDDEN.getStatus(), apiResp.getStatus());
+            assertNotNull(apiResp.getTimestamp(), "Поле Timestamp не должно быть пустым");
+            assertNull(apiResp.getData(), "Поле Data должно быть пустым");
+        } catch (Exception e) {
+            fail("Ошибка парсинга или проверки: " + e.getMessage());
+        }
+    }
 }
